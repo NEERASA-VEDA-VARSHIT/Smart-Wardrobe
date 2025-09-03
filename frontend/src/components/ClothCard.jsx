@@ -1,74 +1,109 @@
-function ClothCard({ item, onToggleWorn, onToggleWash }) {
-  const formatDate = (timestamp) => {
-    if (!timestamp) return "Never worn";
-    return new Date(timestamp).toLocaleDateString();
+function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
+  const formatDate = (value) => {
+    if (!value) return "Never worn";
+    try { 
+      const date = new Date(value);
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) return "Today";
+      if (diffDays === 2) return "Yesterday";
+      if (diffDays <= 7) return `${diffDays - 1} days ago`;
+      return date.toLocaleDateString();
+    } catch { return "Invalid date"; }
+  };
+
+  const getStatusColor = () => {
+    if (!cloth.washed) return "bg-red-100 text-red-800";
+    if (cloth.worn) return "bg-yellow-100 text-yellow-800";
+    return "bg-green-100 text-green-800";
+  };
+
+  const getStatusText = () => {
+    if (!cloth.washed) return "Needs Washing";
+    if (cloth.worn) return "Worn";
+    return "Clean";
   };
 
   return (
-    <div
-      style={{
-        border: "1px solid #ccc",
-        padding: "15px",
-        borderRadius: "8px",
-        backgroundColor: "#f9f9f9",
-        minWidth: "200px",
-      }}
-    >
-      <img
-        src={item.image}
-        alt={item.name}
-        style={{
-          width: "100%",
-          height: "150px",
-          objectFit: "cover",
-          borderRadius: "4px",
-        }}
-      />
-      <h3 style={{ margin: "10px 0 5px 0" }}>{item.name}</h3>
-
-      <div style={{ marginBottom: "10px" }}>
-        <p style={{ margin: "5px 0", fontSize: "14px" }}>
-          <strong>Status:</strong> {item.worn ? "Worn" : "Not worn"}
-        </p>
-        <p style={{ margin: "5px 0", fontSize: "14px" }}>
-          <strong>Last worn:</strong> {formatDate(item.lastWorn)}
-        </p>
-        <p style={{ margin: "5px 0", fontSize: "14px" }}>
-          <strong>Wash status:</strong>{" "}
-          {item.washed ? "Clean" : "Needs washing"}
-        </p>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+      {/* Image Container */}
+      <div className="relative">
+        <img
+          src={`http://localhost:8000${cloth.imageUrl}`}
+          alt={cloth.name}
+          className="w-full h-48 object-cover"
+        />
+        
+        {/* Status Badge */}
+        <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor()}`}>
+          {getStatusText()}
+        </div>
+        
+        {/* Delete Button */}
+        <button
+          onClick={() => onDelete(cloth._id)}
+          className="absolute top-2 left-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors opacity-0 hover:opacity-100"
+          title="Delete item"
+        >
+          ×
+        </button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        <button
-          onClick={() => onToggleWorn(item.id)}
-          style={{
-            padding: "8px 12px",
-            backgroundColor: item.worn ? "#4CAF50" : "#2196F3",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          {item.worn ? "Mark as Not Worn" : "Mark as Worn"}
-        </button>
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-800 mb-3 text-lg">{cloth.name}</h3>
+        
+        {/* Item Details */}
+        <div className="space-y-2 mb-4 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Type:</span>
+            <span className="text-gray-800 capitalize">{cloth.type}</span>
+          </div>
+          
+          <div className="flex justify-between">
+            <span className="text-gray-600">Color:</span>
+            <span className="text-gray-800 capitalize">{cloth.color}</span>
+          </div>
+          
+          <div className="flex justify-between">
+            <span className="text-gray-600">Last Worn:</span>
+            <span className="text-gray-800">{formatDate(cloth.lastWorn)}</span>
+          </div>
+          
+          <div className="flex justify-between">
+            <span className="text-gray-600">Wash Status:</span>
+            <span className={`font-medium ${cloth.washed ? 'text-green-600' : 'text-orange-600'}`}>
+              {cloth.washed ? 'Clean' : 'Needs washing'}
+            </span>
+          </div>
+        </div>
 
-        <button
-          onClick={() => onToggleWash(item.id)}
-          style={{
-            padding: "8px 12px",
-            backgroundColor: item.washed ? "#FF9800" : "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          {item.washed ? "Mark as Needs Washing" : "Mark as Clean"}
-        </button>
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          <button
+            onClick={() => onMarkWorn(cloth._id)}
+            className={`w-full py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              cloth.worn
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            {cloth.worn ? '✓ Mark as Not Worn' : '👕 Mark as Worn'}
+          </button>
+          
+          <button
+            onClick={() => onToggleWash(cloth._id)}
+            className={`w-full py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              cloth.washed
+                ? 'bg-orange-600 text-white hover:bg-orange-700'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+          >
+            {cloth.washed ? '🧺 Mark as Needs Washing' : '✨ Mark as Clean'}
+          </button>
+        </div>
       </div>
     </div>
   );
