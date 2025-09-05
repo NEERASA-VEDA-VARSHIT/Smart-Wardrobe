@@ -15,15 +15,15 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
   };
 
   const getStatusColor = () => {
-    if (!cloth.washed) return "bg-red-100 text-red-800";
-    if (cloth.worn) return "bg-yellow-100 text-yellow-800";
-    return "bg-green-100 text-green-800";
+    if (cloth.worn) return "bg-yellow-100 text-yellow-800"; // Currently being worn
+    if (cloth.needsCleaning) return "bg-red-100 text-red-800"; // Needs cleaning
+    return "bg-green-100 text-green-800"; // Clean and ready
   };
 
   const getStatusText = () => {
-    if (!cloth.washed) return "Needs Washing";
-    if (cloth.worn) return "Worn";
-    return "Clean";
+    if (cloth.worn) return "Currently Worn";
+    if (cloth.needsCleaning) return "Needs Cleaning";
+    return "Clean & Ready";
   };
 
   return (
@@ -43,8 +43,13 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
         
         {/* Delete Button */}
         <button
-          onClick={() => onDelete(cloth._id)}
-          className="absolute top-2 left-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors opacity-0 hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (window.confirm('Are you sure you want to delete this item?')) {
+              onDelete(cloth._id);
+            }
+          }}
+          className="absolute top-2 left-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors opacity-80 hover:opacity-100"
           title="Delete item"
         >
           ×
@@ -68,13 +73,18 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
           </div>
           
           <div className="flex justify-between">
+            <span className="text-gray-600">Occasion:</span>
+            <span className="text-gray-800 capitalize">{cloth.occasion || 'casual'}</span>
+          </div>
+          
+          <div className="flex justify-between">
             <span className="text-gray-600">Last Worn:</span>
             <span className="text-gray-800">{formatDate(cloth.lastWorn)}</span>
           </div>
           
           <div className="flex justify-between">
             <span className="text-gray-600">Wash Status:</span>
-            <span className={`font-medium ${cloth.washed ? 'text-green-600' : 'text-orange-600'}`}>
+            <span className={`font-medium ${cloth.washed ? 'text-green-600' : 'text-red-600'}`}>
               {cloth.washed ? 'Clean' : 'Needs washing'}
             </span>
           </div>
@@ -87,21 +97,32 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
             className={`w-full py-2 px-3 rounded-md text-sm font-medium transition-colors ${
               cloth.worn
                 ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'btn-primary'
             }`}
           >
-            {cloth.worn ? '✓ Mark as Not Worn' : '👕 Mark as Worn'}
+            {cloth.worn ? '✓ Mark as Not Worn' : '👕 Mark as Worn Today'}
           </button>
           
           <button
             onClick={() => onToggleWash(cloth._id)}
             className={`w-full py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-              cloth.washed
-                ? 'bg-orange-600 text-white hover:bg-orange-700'
-                : 'bg-green-600 text-white hover:bg-green-700'
+              cloth.needsCleaning
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-orange-600 text-white hover:bg-orange-700'
             }`}
           >
-            {cloth.washed ? '🧺 Mark as Needs Washing' : '✨ Mark as Clean'}
+            {cloth.needsCleaning ? '✨ Mark as Cleaned' : '🧺 Mark as Needs Cleaning'}
+          </button>
+          
+          <button
+            onClick={() => {
+              if (window.confirm('Are you sure you want to delete this item?')) {
+                onDelete(cloth._id);
+              }
+            }}
+            className="w-full btn-danger text-sm"
+          >
+            🗑️ Delete Item
           </button>
         </div>
       </div>

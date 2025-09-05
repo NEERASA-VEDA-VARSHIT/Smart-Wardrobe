@@ -23,7 +23,7 @@ function UploadForm({ onAddItem }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+    <div className="card animate-fade-in">
       <h2 className="text-2xl font-semibold text-gray-800 mb-6">Add New Clothing Item</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -33,7 +33,7 @@ function UploadForm({ onAddItem }) {
             name="name" 
             placeholder="e.g., Blue Jeans, White T-Shirt" 
             required 
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="input-field"
           />
         </div>
 
@@ -42,7 +42,7 @@ function UploadForm({ onAddItem }) {
           <select 
             name="type" 
             required 
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="select-field"
           >
             <option value="">Select type...</option>
             <option value="shirt">Shirt</option>
@@ -61,8 +61,28 @@ function UploadForm({ onAddItem }) {
             name="color" 
             placeholder="e.g., Blue, Red, Black" 
             required 
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="input-field"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Occasion</label>
+          <select 
+            name="occasion" 
+            className="select-field"
+            defaultValue="casual"
+          >
+            <option value="casual">Casual</option>
+            <option value="formal">Formal</option>
+            <option value="party">Party</option>
+            <option value="workout">Workout</option>
+            <option value="business">Business</option>
+            <option value="date">Date Night</option>
+            <option value="travel">Travel</option>
+            <option value="beach">Beach</option>
+            <option value="winter">Winter</option>
+            <option value="summer">Summer</option>
+          </select>
         </div>
 
         <div>
@@ -73,16 +93,16 @@ function UploadForm({ onAddItem }) {
             accept="image/*" 
             required 
             onChange={handleImageChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="input-field"
           />
           
           {imagePreview && (
-            <div className="mt-4">
+            <div className="mt-4 animate-slide-up">
               <p className="text-sm text-gray-600 mb-2">Preview:</p>
               <img 
                 src={imagePreview} 
                 alt="Preview" 
-                className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                className="w-32 h-32 object-cover rounded-lg border border-gray-300 shadow-sm"
               />
             </div>
           )}
@@ -90,7 +110,7 @@ function UploadForm({ onAddItem }) {
 
         <button 
           type="submit" 
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          className="w-full btn-primary"
         >
           Add to Wardrobe
         </button>

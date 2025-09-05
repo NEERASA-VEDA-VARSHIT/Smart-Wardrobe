@@ -19,7 +19,7 @@ export async function listClothes(req, res) {
 
 export async function createCloth(req, res) {
   try {
-    const { name, type, color, worn = false, lastWorn = null, washed = true } = req.body;
+    const { name, type, color, occasion = 'casual' } = req.body;
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
     const userId = req.user._id;
     
@@ -30,14 +30,16 @@ export async function createCloth(req, res) {
       });
     }
     
+    // Initial state: worn = false, needsCleaning = false, lastWorn = null
     const item = await Cloth.create({ 
       name, 
       type, 
       color, 
+      occasion,
       imageUrl, 
-      worn, 
-      lastWorn, 
-      washed, 
+      worn: false,
+      lastWorn: null,
+      needsCleaning: false,
       userId 
     });
     
@@ -56,7 +58,56 @@ export async function updateCloth(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user._id;
-    const updates = req.body;
+    
+    
+    // Handle both JSON and FormData
+    let updates = {};
+    
+    if (req.body && typeof req.body === 'object') {
+      // Handle state transitions based on action
+      if (req.body.action === 'markWorn') {
+        // Mark as Worn: lastWorn = today, worn = true, needsCleaning = true
+        updates.worn = true;
+        updates.lastWorn = new Date();
+        updates.needsCleaning = true;
+      } else if (req.body.action === 'markUnworn') {
+        // Mark as Unworn: worn = false, lastWorn stays as last recorded date
+        updates.worn = false;
+        // lastWorn remains unchanged
+      } else if (req.body.action === 'cleaned') {
+        // Cleaned: needsCleaning = false, worn = false, lastWorn unchanged
+        updates.needsCleaning = false;
+        updates.worn = false;
+        // lastWorn remains unchanged
+      } else if (req.body.action === 'markClean') {
+        // Just mark as clean without changing worn status
+        updates.needsCleaning = false;
+      } else {
+        // Handle direct field updates for backward compatibility
+        if (req.body.worn !== undefined) {
+          updates.worn = req.body.worn === 'true' || req.body.worn === true;
+        }
+        if (req.body.lastWorn !== undefined) {
+          updates.lastWorn = req.body.lastWorn === 'null' || req.body.lastWorn === null ? null : new Date(req.body.lastWorn);
+        }
+        if (req.body.needsCleaning !== undefined) {
+          updates.needsCleaning = req.body.needsCleaning === 'true' || req.body.needsCleaning === true;
+        }
+        if (req.body.name !== undefined) {
+          updates.name = req.body.name;
+        }
+        if (req.body.type !== undefined) {
+          updates.type = req.body.type;
+        }
+        if (req.body.color !== undefined) {
+          updates.color = req.body.color;
+        }
+        if (req.body.occasion !== undefined) {
+          updates.occasion = req.body.occasion;
+        }
+      }
+    }
+    
     
     // Handle file upload for image updates
     if (req.file) {

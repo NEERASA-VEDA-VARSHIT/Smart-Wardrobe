@@ -2,7 +2,7 @@ import ClothCard from "./ClothCard";
 
 function Gallery({ clothes, onMarkWorn, onToggleWash, onDelete }) {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="card animate-fade-in">
       <h2 className="text-2xl font-semibold text-gray-800 mb-6">Wardrobe Gallery ({clothes.length} items)</h2>
       
       {(!clothes || clothes.length === 0) ? (
@@ -13,14 +13,15 @@ function Gallery({ clothes, onMarkWorn, onToggleWash, onDelete }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {clothes.map((cloth) => (
-            <ClothCard
-              key={cloth._id}
-              cloth={cloth}
-              onMarkWorn={onMarkWorn}
-              onToggleWash={onToggleWash}
-              onDelete={onDelete}
-            />
+          {clothes.map((cloth, index) => (
+            <div key={cloth._id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+              <ClothCard
+                cloth={cloth}
+                onMarkWorn={onMarkWorn}
+                onToggleWash={onToggleWash}
+                onDelete={onDelete}
+              />
+            </div>
           ))}
         </div>
       )}

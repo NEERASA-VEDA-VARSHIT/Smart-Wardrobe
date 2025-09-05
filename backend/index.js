@@ -6,8 +6,11 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { connectDB } from './config/db.js';
 import clothesRoutes from './routes/clothesRoutes.js';
-import itemsRoutes from './routes/itemsRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import sharesRoutes from './routes/sharesRoutes.js';
+import sharedRoutes from './routes/sharedRoutes.js';
+import wardrobeRoutes from './routes/wardrobeRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const app = express();
 const PORT = 8000;
@@ -28,7 +31,10 @@ app.get('/', (req, res) => {
 // API routes
 app.use('/auth', authRoutes);
 app.use('/clothes', clothesRoutes);
-app.use('/items', itemsRoutes);
+app.use('/shares', sharesRoutes);
+app.use('/shared', sharedRoutes);
+app.use('/wardrobe', wardrobeRoutes);
+app.use('/notifications', notificationRoutes);
 
 // Start server after connecting DB
 (async () => {

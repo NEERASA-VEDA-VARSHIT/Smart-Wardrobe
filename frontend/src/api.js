@@ -11,106 +11,181 @@ function getAuthHeaders() {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
-async function handle(res) {
-  const data = await res.json();
+// Enhanced API response handler
+async function handleResponse(res) {
+  let data;
+  try {
+    data = await res.json();
+  } catch (error) {
+    const text = await res.text();
+    throw new Error(`Server error (${res.status}): ${res.statusText}`);
+  }
+  
   if (!res.ok) {
-    // If unauthorized, clear token and redirect to login
     if (res.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    throw new Error(data.message || 'Request failed');
+    throw new Error(data.message || `Request failed (${res.status})`);
   }
   return data;
 }
 
+// Generic API request function
+async function apiRequest(endpoint, options = {}) {
+  const url = `${BASE_URL}${endpoint}`;
+  const config = {
+    headers: getAuthHeaders(),
+    ...options,
+  };
+  
+  if (config.body && typeof config.body === 'object' && !(config.body instanceof FormData)) {
+    config.headers['Content-Type'] = 'application/json';
+    config.body = JSON.stringify(config.body);
+  }
+  
+  const response = await fetch(url, config);
+  return handleResponse(response);
+}
+
 // Authentication API
 export function register(userData) {
-  return fetch(`${BASE_URL}/auth/register`, {
+  return apiRequest('/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(userData),
-  }).then(handle);
+    body: userData,
+  });
 }
 
 export function login(credentials) {
-  return fetch(`${BASE_URL}/auth/login`, {
+  return apiRequest('/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials),
-  }).then(handle);
+    body: credentials,
+  });
 }
 
 export function getProfile() {
-  return fetch(`${BASE_URL}/auth/profile`, {
-    headers: getAuthHeaders(),
-  }).then(handle);
+  return apiRequest('/auth/profile');
 }
 
 export function updateProfile(userData) {
-  return fetch(`${BASE_URL}/auth/profile`, {
+  return apiRequest('/auth/profile', {
     method: 'PUT',
-    headers: { 
-      'Content-Type': 'application/json',
-      ...getAuthHeaders()
-    },
-    body: JSON.stringify(userData),
-  }).then(handle);
+    body: userData,
+  });
 }
 
 // Clothes API (with images) - now requires authentication
 export function getClothes() {
-  const headers = getAuthHeaders();
-  return fetch(`${BASE_URL}/clothes`, {
-    headers: headers,
-  }).then(handle);
+  return apiRequest('/clothes');
 }
 
 export function createCloth(formData) {
-  return fetch(`${BASE_URL}/clothes`, {
+  return apiRequest('/clothes', {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: formData, // FormData for file upload
-  }).then(handle);
+  });
 }
 
 export function updateCloth(id, formData) {
-  return fetch(`${BASE_URL}/clothes/${id}`, {
+  return apiRequest(`/clothes/${id}`, {
     method: 'PUT',
-    headers: getAuthHeaders(),
     body: formData,
-  }).then(handle);
+  });
 }
 
 export function deleteCloth(id) {
-  return fetch(`${BASE_URL}/clothes/${id}`, { 
+  return apiRequest(`/clothes/${id}`, { 
     method: 'DELETE',
-    headers: getAuthHeaders(),
-  }).then(handle);
+  });
 }
 
-// Items API (text-only, for learning)
-export function getItems() {
-  return fetch(`${BASE_URL}/items`).then(handle);
+
+// Collaboration API
+export function listShares() {
+  return apiRequest('/shares');
 }
 
-export function createItem(item) {
-  return fetch(`${BASE_URL}/items`, {
+export function inviteShare(email) {
+  return apiRequest('/shares/invite', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(item),
-  }).then(handle);
+    body: { email }
+  });
 }
 
-export function updateItem(id, updates) {
-  return fetch(`${BASE_URL}/items/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  }).then(handle);
+export function acceptShare(code) {
+  return apiRequest('/shares/accept', {
+    method: 'POST',
+    body: { code }
+  });
 }
 
-export function deleteItem(id) {
-  return fetch(`${BASE_URL}/items/${id}`, { method: 'DELETE' }).then(handle);
+export function getSharedClothes(ownerId) {
+  return apiRequest(`/shared/${ownerId}/clothes`);
+}
+
+export function getSharedOutfits(ownerId) {
+  return apiRequest(`/shared/${ownerId}/outfits`);
+}
+
+export function createSharedOutfit(ownerId, payload) {
+  return apiRequest(`/shared/${ownerId}/outfits`, {
+    method: 'POST',
+    body: payload
+  });
+}
+
+// Wardrobe Sharing API
+export function shareWardrobe(friendEmail, permission = 'viewer') {
+  return apiRequest('/wardrobe/share', {
+    method: 'POST',
+    body: { friendEmail, permission }
+  });
+}
+
+export function getSharedWardrobes() {
+  return apiRequest('/wardrobe/shared');
+}
+
+export function getSharedWardrobe(ownerId) {
+  return apiRequest(`/wardrobe/shared/${ownerId}`);
+}
+
+export function unshareWardrobe(friendId) {
+  return apiRequest(`/wardrobe/unshare/${friendId}`, {
+    method: 'DELETE',
+  });
+}
+
+// Outfit Management API
+export function getMyOutfits() {
+  return apiRequest('/shared/my/outfits');
+}
+
+export function updateOutfitStatus(outfitId, status, ownerNotes) {
+  return apiRequest(`/shared/outfits/${outfitId}`, {
+    method: 'PATCH',
+    body: { status, ownerNotes }
+  });
+}
+
+// Notification API
+export function getNotifications(limit = 50, offset = 0) {
+  return apiRequest(`/notifications?limit=${limit}&offset=${offset}`);
+}
+
+export function getUnreadCount() {
+  return apiRequest('/notifications/unread-count');
+}
+
+export function markNotificationAsRead(notificationId) {
+  return apiRequest(`/notifications/${notificationId}/read`, {
+    method: 'PATCH',
+  });
+}
+
+export function markAllNotificationsAsRead() {
+  return apiRequest('/notifications/read-all', {
+    method: 'PATCH',
+  });
 }
