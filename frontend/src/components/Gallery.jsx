@@ -14,7 +14,7 @@ function Gallery({ clothes, onMarkWorn, onToggleWash, onDelete }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {clothes.map((cloth, index) => (
-            <div key={cloth._id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+            <div key={`${cloth._id}-${cloth.worn}-${cloth.needsCleaning}`} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
               <ClothCard
                 cloth={cloth}
                 onMarkWorn={onMarkWorn}

@@ -46,7 +46,10 @@ function WardrobePage() {
       }
       
       const res = await updateCloth(id, formData);
-      setClothes((prev) => prev.map((c) => (c._id === id ? res.data : c)));
+      const updatedCloth = res.data;
+      console.log('MarkWorn - Updated cloth data:', updatedCloth);
+      setClothes((prev) => prev.map((c) => (c._id === id ? updatedCloth : c)));
+      setFilteredClothes((prev) => prev.map((c) => (c._id === id ? updatedCloth : c)));
     } catch (error) {
       handleApiError(error, 'Failed to update item status');
     }
@@ -66,7 +69,10 @@ function WardrobePage() {
       }
       
       const res = await updateCloth(id, formData);
-      setClothes((prev) => prev.map((c) => (c._id === id ? res.data : c)));
+      const updatedCloth = res.data;
+      console.log('ToggleWash - Updated cloth data:', updatedCloth);
+      setClothes((prev) => prev.map((c) => (c._id === id ? updatedCloth : c)));
+      setFilteredClothes((prev) => prev.map((c) => (c._id === id ? updatedCloth : c)));
     } catch (error) {
       handleApiError(error, 'Failed to update wash status');
     }

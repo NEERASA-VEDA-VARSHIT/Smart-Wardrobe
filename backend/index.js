@@ -11,6 +11,7 @@ import sharesRoutes from './routes/sharesRoutes.js';
 import sharedRoutes from './routes/sharedRoutes.js';
 import wardrobeRoutes from './routes/wardrobeRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import recommendationRoutes from './routes/recommendationRoutes.js';
 
 const app = express();
 const PORT = 8000;
@@ -18,6 +19,7 @@ const PORT = 8000;
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(morgan('dev'));
 
 // Serve static files from uploads directory
@@ -35,6 +37,7 @@ app.use('/shares', sharesRoutes);
 app.use('/shared', sharedRoutes);
 app.use('/wardrobe', wardrobeRoutes);
 app.use('/notifications', notificationRoutes);
+app.use('/recommendations', recommendationRoutes);
 
 // Start server after connecting DB
 (async () => {

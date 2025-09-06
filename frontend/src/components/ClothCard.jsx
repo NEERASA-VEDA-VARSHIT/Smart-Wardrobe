@@ -1,4 +1,6 @@
 function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
+  console.log('ClothCard rendering with cloth:', cloth.name, 'worn:', cloth.worn, 'needsCleaning:', cloth.needsCleaning);
+  
   const formatDate = (value) => {
     if (!value) return "Never worn";
     try { 
@@ -38,7 +40,11 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
         
         {/* Status Badge */}
         <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor()}`}>
-          {getStatusText()}
+          {(() => {
+            const statusText = getStatusText();
+            console.log('Status badge for', cloth.name, ':', statusText, 'worn:', cloth.worn, 'needsCleaning:', cloth.needsCleaning);
+            return statusText;
+          })()}
         </div>
         
         {/* Delete Button */}
@@ -84,8 +90,12 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
           
           <div className="flex justify-between">
             <span className="text-gray-600">Wash Status:</span>
-            <span className={`font-medium ${cloth.washed ? 'text-green-600' : 'text-red-600'}`}>
-              {cloth.washed ? 'Clean' : 'Needs washing'}
+            <span className={`font-medium ${!cloth.needsCleaning ? 'text-green-600' : 'text-red-600'}`}>
+              {(() => {
+                const washStatus = !cloth.needsCleaning ? 'Clean' : 'Needs washing';
+                console.log('Wash status display for', cloth.name, ':', washStatus, 'needsCleaning:', cloth.needsCleaning);
+                return washStatus;
+              })()}
             </span>
           </div>
         </div>
@@ -100,7 +110,11 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
                 : 'btn-primary'
             }`}
           >
-            {cloth.worn ? '✓ Mark as Not Worn' : '👕 Mark as Worn Today'}
+            {(() => {
+              const buttonText = cloth.worn ? '✓ Mark as Not Worn' : '👕 Mark as Worn Today';
+              console.log('Button text for', cloth.name, ':', buttonText, 'worn:', cloth.worn);
+              return buttonText;
+            })()}
           </button>
           
           <button
@@ -111,7 +125,11 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
                 : 'bg-orange-600 text-white hover:bg-orange-700'
             }`}
           >
-            {cloth.needsCleaning ? '✨ Mark as Cleaned' : '🧺 Mark as Needs Cleaning'}
+            {(() => {
+              const buttonText = cloth.needsCleaning ? '✨ Mark as Cleaned' : '🧺 Mark as Needs Cleaning';
+              console.log('Wash button text for', cloth.name, ':', buttonText, 'needsCleaning:', cloth.needsCleaning);
+              return buttonText;
+            })()}
           </button>
           
           <button

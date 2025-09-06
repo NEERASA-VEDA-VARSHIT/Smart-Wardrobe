@@ -1,174 +1,247 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+import { getOutfitRecommendation } from '../api';
+import { handleApiError, showSuccess } from '../utils/errorHandler';
 
-function RecommendationEngine({ clothes }) {
+const OCCASIONS = [
+  { value: 'casual', label: 'Casual', icon: '👕' },
+  { value: 'work', label: 'Work', icon: '👔' },
+  { value: 'party', label: 'Party', icon: '🎉' },
+  { value: 'formal', label: 'Formal', icon: '🤵' },
+  { value: 'sport', label: 'Sport', icon: '🏃' },
+  { value: 'date', label: 'Date', icon: '💕' },
+  { value: 'travel', label: 'Travel', icon: '✈️' }
+];
+
+function RecommendationEngine({ clothes = [] }) {
   const [selectedOccasion, setSelectedOccasion] = useState('casual');
-  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [recommendation, setRecommendation] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
-  const recommendations = useMemo(() => {
-    if (!clothes.length) return [];
+  // Clear recommendation when clothes change (e.g., when items are marked as worn/clean)
+  useEffect(() => {
+    setRecommendation(null);
+  }, [clothes]);
 
-    const cleanClothes = clothes.filter(c => !c.needsCleaning);
-    const notRecentlyWorn = cleanClothes.filter(c => {
-      if (!c.lastWorn) return true;
-      const daysSinceWorn = (Date.now() - new Date(c.lastWorn).getTime()) / (1000 * 60 * 60 * 24);
-      return daysSinceWorn >= 3;
-    });
-
-    // Basic color matching rules
-    const colorGroups = {
-      neutral: ['black', 'white', 'gray', 'beige', 'navy', 'brown'],
-      warm: ['red', 'orange', 'yellow', 'pink', 'coral'],
-      cool: ['blue', 'green', 'purple', 'teal', 'mint']
-    };
-
-    const getColorGroup = (color) => {
-      const lowerColor = color.toLowerCase();
-      for (const [group, colors] of Object.entries(colorGroups)) {
-        if (colors.some(c => lowerColor.includes(c))) return group;
-      }
-      return 'neutral';
-    };
-
-    // Generate outfit combinations
-    const outfits = [];
-    const tops = notRecentlyWorn.filter(c => ['shirt', 'blouse', 'tank', 'sweater'].includes(c.type));
-    const bottoms = notRecentlyWorn.filter(c => ['pants', 'jeans', 'shorts', 'skirt'].includes(c.type));
-    const shoes = notRecentlyWorn.filter(c => c.type === 'shoes');
-    const accessories = notRecentlyWorn.filter(c => c.type === 'accessory');
-
-    // Create combinations with color matching
-    tops.forEach(top => {
-      bottoms.forEach(bottom => {
-        const topColorGroup = getColorGroup(top.color);
-        const bottomColorGroup = getColorGroup(bottom.color);
-        
-        // Good color combinations
-        const isGoodMatch = 
-          topColorGroup === 'neutral' || 
-          bottomColorGroup === 'neutral' ||
-          topColorGroup === bottomColorGroup ||
-          (topColorGroup === 'warm' && bottomColorGroup === 'cool') ||
-          (topColorGroup === 'cool' && bottomColorGroup === 'warm');
-
-        if (isGoodMatch) {
-          const outfit = {
-            id: `${top._id}-${bottom._id}`,
-            items: [top, bottom],
-            score: 0
-          };
-
-          // Add shoes if available
-          if (shoes.length > 0) {
-            const matchingShoes = shoes.filter(shoe => 
-              getColorGroup(shoe.color) === 'neutral' || 
-              getColorGroup(shoe.color) === topColorGroup ||
-              getColorGroup(shoe.color) === bottomColorGroup
-            );
-            if (matchingShoes.length > 0) {
-              outfit.items.push(matchingShoes[0]);
-            }
-          }
-
-          // Add accessories if available
-          if (accessories.length > 0) {
-            const matchingAccessories = accessories.filter(acc => 
-              getColorGroup(acc.color) === 'neutral' || 
-              getColorGroup(acc.color) === topColorGroup
-            );
-            if (matchingAccessories.length > 0) {
-              outfit.items.push(matchingAccessories[0]);
-            }
-          }
-
-          // Calculate score based on occasion match and color harmony
-          outfit.score = 50; // Base score
-          if (top.occasion === selectedOccasion) outfit.score += 20;
-          if (bottom.occasion === selectedOccasion) outfit.score += 20;
-          if (isGoodMatch) outfit.score += 10;
-
-          outfits.push(outfit);
+  const handleGetRecommendation = async () => {
+    setLoading(true);
+    try {
+      const res = await getOutfitRecommendation(selectedOccasion);
+      if (res.success) {
+        setRecommendation(res.data);
+        if (res.data.recommendation) {
+          showSuccess('Outfit recommendation generated!');
         }
-      });
-    });
+      }
+    } catch (error) {
+      handleApiError(error, 'Failed to get recommendation');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return outfits
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6); // Top 6 recommendations
-  }, [clothes, selectedOccasion]);
+  const renderClothingItem = (item, label) => {
+    if (!item) return null;
 
-  const occasions = ['casual', 'formal', 'party', 'workout', 'business', 'date', 'travel'];
+    return (
+      <div className="flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-200">
+        <img 
+          src={`http://localhost:8000${item.imageUrl}`} 
+          alt={item.name}
+          className="w-12 h-12 object-cover rounded-lg"
+        />
+        <div className="flex-1">
+          <div className="font-medium text-gray-900">{item.name}</div>
+          <div className="text-sm text-gray-500">
+            {item.type} • {item.color}
+            {item.occasion && item.occasion !== 'any' && ` • ${item.occasion}`}
+          </div>
+        </div>
+        <div className="text-xs text-gray-400">{label}</div>
+      </div>
+    );
+  };
+
+  const availableItems = clothes.filter(c => !c.worn && !c.needsCleaning).length;
 
   return (
-    <div className="card animate-fade-in">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">🤖 Outfit Recommendations</h2>
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            🤖 Smart Recommendations
+            <span className="ml-2 text-sm font-normal text-gray-500">
+              ({availableItems} available items)
+            </span>
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Get AI-powered outfit suggestions based on your wardrobe
+          </p>
+        </div>
         <button
-          onClick={() => setShowRecommendations(!showRecommendations)}
-          className="btn-primary text-sm"
+          onClick={handleGetRecommendation}
+          disabled={loading || availableItems < 2}
+          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {showRecommendations ? 'Hide' : 'Show'} Recommendations
+          {loading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generating...
+            </>
+          ) : (
+            'Get Recommendation'
+          )}
         </button>
       </div>
 
-      {showRecommendations && (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Select Occasion</label>
-            <select
-              value={selectedOccasion}
-              onChange={(e) => setSelectedOccasion(e.target.value)}
-              className="select-field"
+      {/* Occasion Selection */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-3">
+          Select Occasion
+        </label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+          {OCCASIONS.map((occasion) => (
+            <button
+              key={occasion.value}
+              onClick={() => setSelectedOccasion(occasion.value)}
+              className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200 ${
+                selectedOccasion === occasion.value
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
             >
-              {occasions.map(occasion => (
-                <option key={occasion} value={occasion}>{occasion}</option>
-              ))}
-            </select>
-          </div>
+              <span className="text-2xl mb-1">{occasion.icon}</span>
+              <span className="text-xs font-medium">{occasion.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {recommendations.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <div className="text-4xl mb-2">👔</div>
-              <p>No recommendations available</p>
-              <p className="text-sm">Add more clothes or try a different occasion</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recommendations.map((outfit, index) => (
-                <div key={outfit.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-gray-800">Outfit #{index + 1}</h3>
-                    <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">
-                      {outfit.score}% match
-                    </span>
+      {/* Recommendation Display */}
+      {recommendation && (
+        <div className="space-y-4">
+          {recommendation.recommendation ? (
+            <>
+              {/* Recommendation Header */}
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <span className="text-xl">🤖</span>
                   </div>
-                  
-                  <div className="space-y-2">
-                    {outfit.items.map((item, itemIndex) => (
-                      <div key={item._id} className="flex items-center gap-2 text-sm">
-                        <img 
-                          src={`http://localhost:8000${item.imageUrl}`} 
-                          alt={item.name}
-                          className="w-8 h-8 object-cover rounded"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">{item.name}</div>
-                          <div className="text-gray-500 text-xs">
-                            {item.type} • {item.color}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="text-xs text-gray-500">
-                      Perfect for: {selectedOccasion}
-                    </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900">System Recommendation</h4>
+                    <p className="text-sm text-gray-600">
+                      {selectedOccasion.charAt(0).toUpperCase() + selectedOccasion.slice(1)} outfit
+                      {recommendation.confidence && (
+                        <span className="ml-2 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full">
+                          {recommendation.confidence}% confidence
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
-              ))}
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="text-sm text-indigo-600 hover:text-indigo-800"
+                >
+                  {showDetails ? 'Hide Details' : 'Show Details'}
+                </button>
+              </div>
+
+              {/* Outfit Items */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {renderClothingItem(recommendation.recommendation.top, 'Top')}
+                {renderClothingItem(recommendation.recommendation.bottom, 'Bottom')}
+                {recommendation.recommendation.outerwear && 
+                  renderClothingItem(recommendation.recommendation.outerwear, 'Outerwear')
+                }
+                {recommendation.recommendation.shoes && 
+                  renderClothingItem(recommendation.recommendation.shoes, 'Shoes')
+                }
+              </div>
+
+              {/* Accessories */}
+              {recommendation.recommendation.accessories && recommendation.recommendation.accessories.length > 0 && (
+                <div className="space-y-2">
+                  <h5 className="text-sm font-medium text-gray-700">Accessories</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {recommendation.recommendation.accessories.map((accessory, index) => 
+                      renderClothingItem(accessory, `Accessory ${index + 1}`)
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Reasoning */}
+              {showDetails && recommendation.reasoning && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h5 className="text-sm font-medium text-gray-700 mb-2">Why this combination?</h5>
+                  <p className="text-sm text-gray-600">{recommendation.reasoning}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3 pt-4">
+                <button className="btn-primary flex-1">
+                  ✅ Accept Recommendation
+                </button>
+                <button 
+                  onClick={() => setRecommendation(null)}
+                  className="btn-secondary flex-1"
+                >
+                  ❌ Try Different
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">😔</span>
+              </div>
+              <h4 className="text-lg font-medium text-gray-900 mb-2">No Recommendation Available</h4>
+              <p className="text-gray-600 mb-4">{recommendation.message}</p>
+              <button
+                onClick={handleGetRecommendation}
+                className="btn-secondary"
+              >
+                Try Again
+              </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Help Text */}
+      {!recommendation && availableItems >= 2 && (
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <div className="flex items-start">
+            <span className="text-blue-500 mr-2">💡</span>
+            <div className="text-sm text-blue-700">
+              <p className="font-medium mb-1">How it works:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Selects items that aren't worn or dirty</li>
+                <li>Prioritizes least recently worn items</li>
+                <li>Matches colors and styles for the occasion</li>
+                <li>Considers your personal preferences</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Insufficient Items Warning */}
+      {availableItems < 2 && (
+        <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
+          <div className="flex items-start">
+            <span className="text-yellow-500 mr-2">⚠️</span>
+            <div className="text-sm text-yellow-700">
+              <p className="font-medium mb-1">Need more items for recommendations</p>
+              <p>Add at least 2 clean, unworn items to get outfit suggestions.</p>
+            </div>
+          </div>
         </div>
       )}
     </div>

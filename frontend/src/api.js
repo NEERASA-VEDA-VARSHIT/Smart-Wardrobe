@@ -189,3 +189,15 @@ export function markAllNotificationsAsRead() {
     method: 'PATCH',
   });
 }
+
+// Recommendation API functions
+export function getOutfitRecommendation(occasion = 'casual') {
+  return apiRequest('/recommendations/outfit', {
+    method: 'POST',
+    body: { occasion }
+  });
+}
+
+export function getRecommendationHistory() {
+  return apiRequest('/recommendations/history');
+}

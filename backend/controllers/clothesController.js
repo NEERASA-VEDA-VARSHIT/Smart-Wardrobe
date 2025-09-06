@@ -59,6 +59,8 @@ export async function updateCloth(req, res) {
     const { id } = req.params;
     const userId = req.user._id;
     
+    console.log('Update request body:', req.body);
+    console.log('Update request action:', req.body.action);
     
     // Handle both JSON and FormData
     let updates = {};

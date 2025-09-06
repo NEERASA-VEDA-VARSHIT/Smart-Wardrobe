@@ -120,6 +120,27 @@ function AddClothesPage() {
         </div>
       )}
 
+      {/* Quick Recommendation */}
+      {clothes.length >= 2 && (
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900 flex items-center">
+              🤖 Ready for Recommendations!
+            </h3>
+            <a 
+              href="/" 
+              className="btn-primary text-sm"
+            >
+              Get Outfit Suggestions →
+            </a>
+          </div>
+          <p className="text-sm text-gray-600">
+            You have enough items in your wardrobe to get smart outfit recommendations. 
+            Visit the Wardrobe page to try our AI-powered styling suggestions!
+          </p>
+        </div>
+      )}
+
       {/* Tips */}
       <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-3">💡 Tips for Better Results</h3>
