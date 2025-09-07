@@ -365,6 +365,33 @@ function Collaboration() {
           )}
         </div>
 
+        {/* Stylist Dashboard Access */}
+        {sharedWardrobes.some(w => w.permission === 'stylist') && (
+          <div className="mb-6 bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Stylist Dashboard Access</h3>
+            <div className="space-y-3">
+              {sharedWardrobes
+                .filter(wardrobe => wardrobe.permission === 'stylist')
+                .map((wardrobe) => (
+                  <div key={wardrobe._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <div className="font-medium text-gray-900">{wardrobe.owner.name}</div>
+                      <div className="text-sm text-gray-500">Stylist Access</div>
+                    </div>
+                    <a
+                      href={`/stylist/${wardrobe.owner._id}`}
+                      className="btn-primary text-sm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open Stylist Dashboard
+                    </a>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
         {/* Outfit Builder for Selected Wardrobe */}
         {selectedWardrobe && (
           <div className="mb-6">

@@ -6,11 +6,23 @@ const Gallery = lazy(() => import('../components/Gallery'));
 const AdvancedFilters = lazy(() => import('../components/AdvancedFilters'));
 const RecommendationEngine = lazy(() => import('../components/RecommendationEngine'));
 const OutfitManager = lazy(() => import('../components/OutfitManager'));
+const OutfitSuggestions = lazy(() => import('../components/OutfitSuggestions'));
+const PhysicalWardrobe = lazy(() => import('../components/PhysicalWardrobe'));
+const WardrobeViewSwitcher = lazy(() => import('../components/WardrobeViewSwitcher'));
+const WardrobeFilters = lazy(() => import('../components/WardrobeFilters'));
 
 function WardrobePage() {
   const [clothes, setClothes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filteredClothes, setFilteredClothes] = useState([]);
+  const [viewMode, setViewMode] = useState('physical'); // 'physical' or 'cards'
+  const [searchTerm, setSearchTerm] = useState('');
+  const [wardrobeFilters, setWardrobeFilters] = useState({
+    type: '',
+    color: '',
+    occasion: '',
+    status: ''
+  });
 
   const loadClothes = async () => {
     setLoading(true);
@@ -135,6 +147,55 @@ function WardrobePage() {
     setFilteredClothes(filtered);
   };
 
+  // New filtering logic for physical wardrobe
+  const handleWardrobeFilterChange = (filters) => {
+    setWardrobeFilters(filters);
+    applyWardrobeFilters(filters, searchTerm);
+  };
+
+  const handleWardrobeSearch = (term) => {
+    setSearchTerm(term);
+    applyWardrobeFilters(wardrobeFilters, term);
+  };
+
+  const applyWardrobeFilters = (filters, search) => {
+    let filtered = [...clothes];
+
+    // Apply search
+    if (search) {
+      filtered = filtered.filter(c => 
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        c.type.toLowerCase().includes(search.toLowerCase()) ||
+        c.color.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    // Apply filters
+    if (filters.type) {
+      filtered = filtered.filter(c => c.type === filters.type);
+    }
+    if (filters.color) {
+      filtered = filtered.filter(c => c.color?.toLowerCase().includes(filters.color.toLowerCase()));
+    }
+    if (filters.occasion) {
+      filtered = filtered.filter(c => (c.occasion || 'casual') === filters.occasion);
+    }
+    if (filters.status === 'available') {
+      filtered = filtered.filter(c => !c.worn && !c.needsCleaning);
+    } else if (filters.status === 'worn') {
+      filtered = filtered.filter(c => c.worn);
+    } else if (filters.status === 'dirty') {
+      filtered = filtered.filter(c => c.needsCleaning);
+    }
+
+    setFilteredClothes(filtered);
+  };
+
+  const handleItemSelect = (item) => {
+    // Handle item selection for physical wardrobe
+    console.log('Selected item:', item);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -154,14 +215,34 @@ function WardrobePage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* View Switcher */}
       <Suspense fallback={<div className="bg-white rounded-lg shadow-sm p-6"><div className="animate-pulse h-20 bg-gray-200 rounded"></div></div>}>
-        <AdvancedFilters clothes={clothes} onFilterChange={handleFilterChange} />
+        <WardrobeViewSwitcher currentView={viewMode} onViewChange={setViewMode} />
       </Suspense>
+
+      {/* Filters - Different for each view */}
+      {viewMode === 'physical' ? (
+        <Suspense fallback={<div className="bg-white rounded-lg shadow-sm p-6"><div className="animate-pulse h-20 bg-gray-200 rounded"></div></div>}>
+          <WardrobeFilters 
+            clothes={clothes} 
+            onFilterChange={handleWardrobeFilterChange}
+            onSearch={handleWardrobeSearch}
+          />
+        </Suspense>
+      ) : (
+        <Suspense fallback={<div className="bg-white rounded-lg shadow-sm p-6"><div className="animate-pulse h-20 bg-gray-200 rounded"></div></div>}>
+          <AdvancedFilters clothes={clothes} onFilterChange={handleFilterChange} />
+        </Suspense>
+      )}
 
       {/* Recommendations */}
       <Suspense fallback={<div className="bg-white rounded-lg shadow-sm p-6"><div className="animate-pulse h-32 bg-gray-200 rounded"></div></div>}>
         <RecommendationEngine clothes={clothes} />
+      </Suspense>
+
+      {/* Friend Suggestions */}
+      <Suspense fallback={<div className="bg-white rounded-lg shadow-sm p-6"><div className="animate-pulse h-40 bg-gray-200 rounded"></div></div>}>
+        <OutfitSuggestions />
       </Suspense>
 
       {/* Outfit Manager */}
@@ -169,12 +250,22 @@ function WardrobePage() {
         <OutfitManager />
       </Suspense>
 
-      {/* Gallery */}
+      {/* Wardrobe Display */}
       {loading ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
           <div className="text-lg text-gray-600">Loading your wardrobe...</div>
         </div>
+      ) : viewMode === 'physical' ? (
+        <Suspense fallback={<div className="bg-white rounded-lg shadow-sm p-6"><div className="animate-pulse h-64 bg-gray-200 rounded"></div></div>}>
+          <PhysicalWardrobe 
+            clothes={filteredClothes}
+            onMarkWorn={markWorn}
+            onToggleWash={toggleWash}
+            onDelete={removeCloth}
+            onItemSelect={handleItemSelect}
+          />
+        </Suspense>
       ) : (
         <Suspense fallback={<div className="bg-white rounded-lg shadow-sm p-6"><div className="animate-pulse h-64 bg-gray-200 rounded"></div></div>}>
           <Gallery 

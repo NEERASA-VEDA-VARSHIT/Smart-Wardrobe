@@ -201,3 +201,41 @@ export function getOutfitRecommendation(occasion = 'casual') {
 export function getRecommendationHistory() {
   return apiRequest('/recommendations/history');
 }
+
+// Outfit Suggestion API functions
+export function getMySuggestions() {
+  return apiRequest('/suggestions/my-suggestions');
+}
+
+export function getMyCreatedSuggestions() {
+  return apiRequest('/suggestions/my-created');
+}
+
+export function createSuggestion(suggestionData) {
+  return apiRequest('/suggestions/create', {
+    method: 'POST',
+    body: suggestionData
+  });
+}
+
+export function acceptSuggestion(suggestionId, feedback = '') {
+  return apiRequest(`/suggestions/${suggestionId}/accept`, {
+    method: 'PATCH',
+    body: { feedback }
+  });
+}
+
+export function rejectSuggestion(suggestionId, feedback = '') {
+  return apiRequest(`/suggestions/${suggestionId}/reject`, {
+    method: 'PATCH',
+    body: { feedback }
+  });
+}
+
+export function getWardrobeForStyling(ownerId) {
+  return apiRequest(`/suggestions/wardrobe/${ownerId}`);
+}
+
+export function getSuggestionStats() {
+  return apiRequest('/suggestions/stats');
+}
