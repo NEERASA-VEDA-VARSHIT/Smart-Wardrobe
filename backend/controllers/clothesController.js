@@ -1,6 +1,5 @@
 import { Cloth } from '../models/Cloth.js';
-import path from 'path';
-import fs from 'fs';
+import { uploadImageToSupabase, deleteImageFromSupabase, ensureBucketExists } from '../config/supabase.js';
 
 export async function listClothes(req, res) {
   try {
@@ -20,13 +19,29 @@ export async function listClothes(req, res) {
 export async function createCloth(req, res) {
   try {
     const { name, type, color, occasion = 'casual' } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
     const userId = req.user._id;
     
-    if (!name || !type || !color || !imageUrl) {
+    if (!name || !type || !color || !req.file) {
       return res.status(400).json({ 
         success: false, 
         message: 'name, type, color, and image are required' 
+      });
+    }
+
+    // Check if Supabase bucket exists (warn if not)
+    const bucketCheck = await ensureBucketExists();
+    if (!bucketCheck.success) {
+      console.warn('Supabase bucket check failed:', bucketCheck.error);
+    }
+
+    // Upload image to Supabase (store under clothes/<userId>/)
+    const uploadResult = await uploadImageToSupabase(req.file, 'wardrobe-images', `clothes/${userId}`);
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload image',
+        error: uploadResult.error
       });
     }
     
@@ -36,7 +51,7 @@ export async function createCloth(req, res) {
       type, 
       color, 
       occasion,
-      imageUrl, 
+      imageUrl: uploadResult.url, // Use Supabase URL
       worn: false,
       lastWorn: null,
       needsCleaning: false,
@@ -113,7 +128,35 @@ export async function updateCloth(req, res) {
     
     // Handle file upload for image updates
     if (req.file) {
-      updates.imageUrl = `/uploads/${req.file.filename}`;
+      // Check if Supabase bucket exists (warn if not)
+      const bucketCheck = await ensureBucketExists();
+      if (!bucketCheck.success) {
+        console.warn('Supabase bucket check failed:', bucketCheck.error);
+      }
+
+      // Upload new image to Supabase (store under clothes/<userId>/)
+      const uploadResult = await uploadImageToSupabase(req.file, 'wardrobe-images', `clothes/${userId}`);
+      
+      if (!uploadResult.success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to upload new image',
+          error: uploadResult.error
+        });
+      }
+
+      // Get the current item to delete old image
+      const currentItem = await Cloth.findById(id);
+      if (currentItem && currentItem.imageUrl) {
+        // Extract path from Supabase URL for deletion
+        const urlParts = currentItem.imageUrl.split('/');
+        const oldPath = urlParts.slice(-2).join('/'); // Get 'clothes/filename'
+        
+        // Delete old image from Supabase
+        await deleteImageFromSupabase(oldPath);
+      }
+
+      updates.imageUrl = uploadResult.url;
     }
     
     // Only allow updating items that belong to the user
@@ -155,13 +198,19 @@ export async function deleteCloth(req, res) {
       });
     }
     
-    // Delete the associated image file
-    if (item.imageUrl) {
-      const imagePath = path.join(process.cwd(), 'uploads', path.basename(item.imageUrl));
+    // Delete the associated image from Supabase
+    if (item.imageUrl && item.imageUrl.includes('supabase')) {
       try {
-        fs.unlinkSync(imagePath);
-      } catch (err) {
-        console.error('Error deleting image file:', err);
+        // Extract path from Supabase URL
+        const urlParts = item.imageUrl.split('/');
+        const imagePath = urlParts.slice(-2).join('/'); // Get 'clothes/filename'
+        
+        const deleteResult = await deleteImageFromSupabase(imagePath);
+        if (!deleteResult.success) {
+          console.warn('Failed to delete image from Supabase:', deleteResult.error);
+        }
+      } catch (fileError) {
+        console.warn('Failed to delete image from Supabase:', fileError.message);
       }
     }
     

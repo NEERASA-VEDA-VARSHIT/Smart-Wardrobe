@@ -345,7 +345,7 @@ function PhysicalWardrobe({ clothes, onMarkWorn, onToggleWash, onDelete, onItemS
       </div>
 
       {/* CSS Animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes hangerSway {
           0%, 100% { transform: rotate(0deg); }
           50% { transform: rotate(2deg); }

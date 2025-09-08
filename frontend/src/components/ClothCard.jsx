@@ -1,3 +1,5 @@
+import { getImageUrl, getImageAlt } from '../utils/imageUtils';
+
 function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
   console.log('ClothCard rendering with cloth:', cloth.name, 'worn:', cloth.worn, 'needsCleaning:', cloth.needsCleaning);
   
@@ -33,8 +35,8 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
       {/* Image Container */}
       <div className="relative">
         <img
-          src={`http://localhost:8000${cloth.imageUrl}`}
-          alt={cloth.name}
+          src={getImageUrl(cloth.imageUrl)}
+          alt={getImageAlt(cloth)}
           className="w-full h-48 object-cover"
         />
         

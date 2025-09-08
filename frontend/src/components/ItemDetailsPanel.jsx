@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getImageUrl, getImageAlt } from '../utils/imageUtils';
 
 function ItemDetailsPanel({ selectedItem, onMarkWorn, onToggleWash, onDelete, onAddToOutfit }) {
   const [showActions, setShowActions] = useState(false);
@@ -70,8 +71,8 @@ function ItemDetailsPanel({ selectedItem, onMarkWorn, onToggleWash, onDelete, on
       {/* Item Image */}
       <div className="relative mb-4">
         <img
-          src={`http://localhost:8000${selectedItem.imageUrl}`}
-          alt={selectedItem.name}
+          src={getImageUrl(selectedItem.imageUrl)}
+          alt={getImageAlt(selectedItem)}
           className="w-full h-64 object-cover rounded-lg shadow-md"
         />
         

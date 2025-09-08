@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getImageUrl, getImageAlt } from '../utils/imageUtils';
 
 function WardrobeCloset({ clothes, onItemClick, onMarkWorn, onToggleWash, onDelete }) {
   const [wardrobeOpen, setWardrobeOpen] = useState(false);
@@ -67,8 +68,8 @@ function WardrobeCloset({ clothes, onItemClick, onMarkWorn, onToggleWash, onDele
             <div className="relative w-16 h-16 mx-auto">
               <div className="w-full h-full rounded-lg overflow-hidden shadow-md border-2 border-gray-200">
                 <img
-                  src={`http://localhost:8000${item.imageUrl}`}
-                  alt={item.name}
+                  src={getImageUrl(item.imageUrl)}
+                  alt={getImageAlt(item)}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -121,8 +122,8 @@ function WardrobeCloset({ clothes, onItemClick, onMarkWorn, onToggleWash, onDele
                 {/* Clothing item */}
                 <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-14 h-16 rounded-lg overflow-hidden shadow-md">
                   <img
-                    src={`http://localhost:8000${item.imageUrl}`}
-                    alt={item.name}
+                    src={getImageUrl(item.imageUrl)}
+                    alt={getImageAlt(item)}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -176,8 +177,8 @@ function WardrobeCloset({ clothes, onItemClick, onMarkWorn, onToggleWash, onDele
               {/* Main item */}
               <div className="absolute inset-2 rounded-lg overflow-hidden shadow-md">
                 <img
-                  src={`http://localhost:8000${item.imageUrl}`}
-                  alt={item.name}
+                  src={getImageUrl(item.imageUrl)}
+                  alt={getImageAlt(item)}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -226,8 +227,8 @@ function WardrobeCloset({ clothes, onItemClick, onMarkWorn, onToggleWash, onDele
               <div className="relative w-20 h-12 mx-auto">
                 <div className="w-full h-full rounded-lg overflow-hidden shadow-md border border-gray-300">
                   <img
-                    src={`http://localhost:8000${item.imageUrl}`}
-                    alt={item.name}
+                    src={getImageUrl(item.imageUrl)}
+                    alt={getImageAlt(item)}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -321,7 +322,7 @@ function WardrobeCloset({ clothes, onItemClick, onMarkWorn, onToggleWash, onDele
       </div>
 
       {/* CSS Animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes hangerSway {
           0%, 100% { transform: rotate(0deg); }
           50% { transform: rotate(2deg); }
