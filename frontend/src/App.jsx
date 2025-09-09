@@ -8,6 +8,7 @@ import AddClothesPage from "./pages/AddClothesPage";
 import CollaborationPage from "./pages/CollaborationPage";
 import OutfitReviewPage from "./pages/OutfitReviewPage";
 import StylistPage from "./pages/StylistPage";
+import ProfilePage from "./pages/ProfilePage";
 import "./index.css";
 
 function App() {
@@ -68,6 +69,7 @@ function App() {
           <Route path="/collaboration" element={<CollaborationPage />} />
           <Route path="/review" element={<OutfitReviewPage />} />
           <Route path="/stylist/:ownerId" element={<StylistPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

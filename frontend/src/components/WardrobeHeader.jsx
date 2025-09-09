@@ -79,7 +79,9 @@ function WardrobeHeader({
               >
                 Shared
               </button>
-              <button className="text-gray-600 hover:text-gray-900 transition-colors">
+              <button 
+                onClick={() => navigate('/profile')}
+                className="text-gray-600 hover:text-gray-900 transition-colors">
                 Profile
               </button>
             </nav>

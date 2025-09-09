@@ -1,24 +1,27 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { getWardrobeForStyling } from '../api';
 import { handleApiError } from '../utils/errorHandler';
 import StylistDashboard from '../components/StylistDashboard';
 
 function StylistPage() {
   const { ownerId } = useParams();
+  const location = useLocation();
   const [ownerName, setOwnerName] = useState('Loading...');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     loadOwnerInfo();
-  }, [ownerId]);
+  }, [ownerId, location.search]);
 
   const loadOwnerInfo = async () => {
     setLoading(true);
     try {
       // First, try to get wardrobe to check access
-      const res = await getWardrobeForStyling(ownerId);
+      const params = new URLSearchParams(location.search);
+      const collectionId = params.get('collection');
+      const res = await getWardrobeForStyling(ownerId + (collectionId ? `?collectionId=${collectionId}` : ''));
       if (res.success) {
         // If successful, we have access - get owner name from the first item
         // For now, we'll use a placeholder. In a real app, you'd get this from user data

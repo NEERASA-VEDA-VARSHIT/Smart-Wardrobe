@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
-import { getMySuggestions, acceptSuggestion, rejectSuggestion } from '../api';
+import { getMySuggestions, acceptSuggestion, rejectSuggestion, listSuggestionComments, addSuggestionComment, deleteSuggestionApi } from '../api';
 import { handleApiError, showSuccess } from '../utils/errorHandler';
 
 function OutfitSuggestions() {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(null);
+  const [openComments, setOpenComments] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [stylistSearch, setStylistSearch] = useState('');
 
   useEffect(() => {
     loadSuggestions();
@@ -52,6 +57,27 @@ function OutfitSuggestions() {
       handleApiError(error, 'Failed to reject suggestion');
     } finally {
       setProcessing(null);
+    }
+  };
+
+  const openCommentsFor = async (id) => {
+    try {
+      setOpenComments(id);
+      const res = await listSuggestionComments(id);
+      setComments(res.data || []);
+    } catch (e) {
+      handleApiError(e, 'Failed to load comments');
+    }
+  };
+
+  const postComment = async () => {
+    try {
+      if (!newComment.trim() || !openComments) return;
+      const res = await addSuggestionComment(openComments, newComment.trim());
+      setComments((prev) => [...prev, res.data]);
+      setNewComment('');
+    } catch (e) {
+      handleApiError(e, 'Failed to post comment');
     }
   };
 
@@ -165,8 +191,16 @@ function OutfitSuggestions() {
             >
               {isProcessing ? 'Processing...' : '❌ Reject Suggestion'}
             </button>
+            <button onClick={() => openCommentsFor(suggestion._id)} className="px-4 py-2 rounded-lg font-medium border border-gray-200 hover:bg-gray-50">💬 Comments</button>
           </div>
         )}
+        {/* Delete */}
+        <div className="mt-2 text-right">
+          <button onClick={async () => {
+            try { await deleteSuggestionApi(suggestion._id); showSuccess('Suggestion deleted'); loadSuggestions(); }
+            catch(e){ handleApiError(e, 'Failed to delete'); }
+          }} className="text-xs text-red-600 hover:text-red-700">Delete</button>
+        </div>
 
         {/* Response date (if responded) */}
         {suggestion.respondedAt && (
@@ -178,8 +212,13 @@ function OutfitSuggestions() {
     );
   };
 
-  const pendingSuggestions = suggestions.filter(s => s.status === 'pending');
-  const processedSuggestions = suggestions.filter(s => s.status !== 'pending');
+  const filtered = suggestions.filter(s => {
+    if (statusFilter !== 'all' && s.status !== statusFilter) return false;
+    if (stylistSearch && !(s.stylist?.name || '').toLowerCase().includes(stylistSearch.toLowerCase())) return false;
+    return true;
+  });
+  const pendingSuggestions = filtered.filter(s => s.status === 'pending');
+  const processedSuggestions = filtered.filter(s => s.status !== 'pending');
 
   return (
     <div className="space-y-6">
@@ -192,9 +231,15 @@ function OutfitSuggestions() {
               Get styling suggestions from friends and family
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">Pending</div>
-            <div className="text-2xl font-bold text-yellow-600">{pendingSuggestions.length}</div>
+          <div className="flex items-center gap-3">
+            <input value={stylistSearch} onChange={(e)=>setStylistSearch(e.target.value)} placeholder="Search stylist" className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
+            <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} className="border border-gray-300 rounded-md px-3 py-2 text-sm">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+              <option value="modified">Modified</option>
+            </select>
           </div>
         </div>
       </div>
@@ -237,6 +282,33 @@ function OutfitSuggestions() {
           <p className="text-gray-500">
             Share your wardrobe with friends and family to start receiving outfit suggestions!
           </p>
+        </div>
+      )}
+      {openComments && (
+        <div className="fixed inset-0 bg-black/30 z-40 flex items-end sm:items-center justify-center">
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-4 shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold text-gray-900">Suggestion Comments</div>
+              <button onClick={() => setOpenComments(null)} className="text-gray-600">✕</button>
+            </div>
+            <div className="max-h-64 overflow-auto space-y-2 mb-2">
+              {comments.length === 0 ? (
+                <div className="text-xs text-gray-500">No comments yet</div>
+              ) : (
+                comments.map((c) => (
+                  <div key={c._id || c.createdAt} className="text-xs">
+                    <div className="font-medium text-gray-800">{c.role === 'owner' ? 'You' : 'Stylist'}</div>
+                    <div className="text-gray-700 whitespace-pre-wrap">{c.message}</div>
+                    <div className="text-[10px] text-gray-400">{new Date(c.createdAt).toLocaleString()}</div>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write a comment" className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm" />
+              <button onClick={postComment} className="btn-primary text-sm">Send</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

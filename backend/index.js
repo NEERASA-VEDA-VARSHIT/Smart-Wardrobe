@@ -13,6 +13,7 @@ import wardrobeRoutes from './routes/wardrobeRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import recommendationRoutes from './routes/recommendationRoutes.js';
 import outfitSuggestionRoutes from './routes/outfitSuggestionRoutes.js';
+import collectionRoutes from './routes/collectionRoutes.js';
 
 const app = express();
 const PORT = 8000;
@@ -40,6 +41,7 @@ app.use('/wardrobe', wardrobeRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/recommendations', recommendationRoutes);
 app.use('/suggestions', outfitSuggestionRoutes);
+app.use('/collections', collectionRoutes);
 
 // Start server after connecting DB
 (async () => {

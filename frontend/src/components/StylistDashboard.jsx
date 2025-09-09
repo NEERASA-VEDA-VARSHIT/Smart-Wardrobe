@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getWardrobeForStyling, createSuggestion } from '../api';
+import { useLocation } from 'react-router-dom';
+import { getImageUrl, getImageAlt } from '../utils/imageUtils';
+import { getWardrobeForStyling, createSuggestion, getMyCreatedSuggestions, deleteSuggestionApi } from '../api';
 import { handleApiError, showSuccess } from '../utils/errorHandler';
 
 const OCCASIONS = [
@@ -14,21 +16,26 @@ const OCCASIONS = [
 
 function StylistDashboard({ ownerId, ownerName }) {
   const [clothes, setClothes] = useState([]);
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const collectionId = params.get('collection');
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedOccasion, setSelectedOccasion] = useState('casual');
   const [suggestionTitle, setSuggestionTitle] = useState('');
   const [suggestionDescription, setSuggestionDescription] = useState('');
+  const [myCreated, setMyCreated] = useState([]);
 
   useEffect(() => {
     loadWardrobe();
+    loadCreated();
   }, [ownerId]);
 
   const loadWardrobe = async () => {
     setLoading(true);
     try {
-      const res = await getWardrobeForStyling(ownerId);
+      const res = await getWardrobeForStyling(ownerId + (collectionId ? `?collectionId=${collectionId}` : ''));
       if (res.success) {
         setClothes(res.data);
       }
@@ -37,6 +44,13 @@ function StylistDashboard({ ownerId, ownerName }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadCreated = async () => {
+    try {
+      const res = await getMyCreatedSuggestions();
+      if (res.success) setMyCreated(res.data);
+    } catch (e) { /* non-fatal */ }
   };
 
   const toggleItemSelection = (item) => {
@@ -63,7 +77,8 @@ function StylistDashboard({ ownerId, ownerName }) {
         items: selectedItems.map(item => item._id),
         title: suggestionTitle || `${selectedOccasion} outfit suggestion`,
         description: suggestionDescription,
-        occasion: selectedOccasion
+        occasion: selectedOccasion,
+        collectionId: collectionId || undefined
       };
 
       const res = await createSuggestion(suggestionData);
@@ -110,8 +125,8 @@ function StylistDashboard({ ownerId, ownerName }) {
         }`}
       >
         <img
-          src={`http://localhost:8000${item.imageUrl}`}
-          alt={item.name}
+          src={getImageUrl(item.imageUrl)}
+          alt={getImageAlt(item)}
           className="w-full h-32 object-cover rounded-t-lg"
         />
         
@@ -208,8 +223,8 @@ function StylistDashboard({ ownerId, ownerName }) {
                 {selectedItems.map((item, index) => (
                   <div key={item._id} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
                     <img
-                      src={`http://localhost:8000${item.imageUrl}`}
-                      alt={item.name}
+                      src={getImageUrl(item.imageUrl)}
+                      alt={getImageAlt(item)}
                       className="w-12 h-12 object-cover rounded"
                     />
                     <div className="flex-1 min-w-0">
@@ -285,6 +300,31 @@ function StylistDashboard({ ownerId, ownerName }) {
             >
               {saving ? 'Creating...' : 'Create Outfit Suggestion'}
             </button>
+          </div>
+
+          {/* My Created Suggestions */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-gray-900">My Created Suggestions</h3>
+              <button onClick={loadCreated} className="text-sm text-gray-600 hover:text-gray-800">Refresh</button>
+            </div>
+            {myCreated.length === 0 ? (
+              <div className="text-sm text-gray-500">No suggestions yet</div>
+            ) : (
+              <div className="space-y-2">
+                {myCreated.map((s) => (
+                  <div key={s._id} className="flex items-center justify-between text-sm">
+                    <div className="truncate">
+                      <span className="font-medium">{s.title}</span>
+                      <span className="text-gray-500"> • {s.status}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={async ()=>{ try{ await deleteSuggestionApi(s._id); showSuccess('Deleted'); loadCreated(); } catch(e){ handleApiError(e); } }} className="text-red-600 hover:text-red-700">Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

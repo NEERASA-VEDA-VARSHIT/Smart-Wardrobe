@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getClothes, updateCloth, deleteCloth } from '../api';
 import { handleApiError } from '../utils/errorHandler';
 import WardrobeHeader from '../components/WardrobeHeader';
 import WardrobeCloset from '../components/WardrobeCloset';
 import ItemDetailsPanel from '../components/ItemDetailsPanel';
 import WardrobeFooter from '../components/WardrobeFooter';
+import PlannerView from '../components/PlannerView';
+import WardrobeViewSwitcher from '../components/WardrobeViewSwitcher';
+import Gallery from '../components/Gallery';
 
 function CompleteWardrobePage() {
   const navigate = useNavigate();
@@ -13,7 +16,12 @@ function CompleteWardrobePage() {
   const [filteredClothes, setFilteredClothes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
+  const [view, setView] = useState(() => {
+    const urlView = new URLSearchParams(window.location.search).get('view');
+    return urlView || localStorage.getItem('preferredView') || 'closet';
+  });
   const [filters, setFilters] = useState({
     category: '',
     occasion: '',
@@ -30,6 +38,16 @@ function CompleteWardrobePage() {
   useEffect(() => {
     applyFilters();
   }, [clothes, filters, searchTerm]);
+
+  // keep URL and localStorage in sync for view
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('view') !== view) {
+      params.set('view', view);
+      navigate({ search: params.toString() }, { replace: true });
+    }
+    localStorage.setItem('preferredView', view);
+  }, [view]);
 
   const loadClothes = async () => {
     setLoading(true);
@@ -220,18 +238,43 @@ function CompleteWardrobePage() {
         dirtyItems={stats.dirty}
       />
 
+      {/* View Switcher */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-4">
+          <WardrobeViewSwitcher currentView={view} onViewChange={setView} />
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex flex-col lg:flex-row lg:space-x-6">
-          {/* Wardrobe Closet */}
+          {/* Views */}
           <div className="flex-1">
-            <WardrobeCloset
-              clothes={filteredClothes}
-              onItemClick={handleItemClick}
-              onMarkWorn={markWorn}
-              onToggleWash={toggleWash}
-              onDelete={removeCloth}
-            />
+            {view === 'closet' && (
+              <WardrobeCloset
+                clothes={filteredClothes}
+                onItemClick={handleItemClick}
+                onMarkWorn={markWorn}
+                onToggleWash={toggleWash}
+                onDelete={removeCloth}
+              />
+            )}
+            {view === 'gallery' && (
+              <Gallery
+                clothes={filteredClothes}
+                onMarkWorn={markWorn}
+                onToggleWash={toggleWash}
+                onDelete={removeCloth}
+              />
+            )}
+            {view === 'planner' && (
+              <PlannerView
+                clothes={filteredClothes}
+                onMarkWorn={markWorn}
+                onMarkClean={toggleWash}
+                onSelectItem={handleItemClick}
+              />
+            )}
           </div>
 
           {/* Item Details Panel */}

@@ -2,18 +2,9 @@ import { useState } from 'react';
 
 function WardrobeViewSwitcher({ currentView, onViewChange }) {
   const views = [
-    {
-      id: 'physical',
-      name: 'Physical Wardrobe',
-      icon: '👁️',
-      description: 'Realistic closet experience'
-    },
-    {
-      id: 'cards',
-      name: 'Card View',
-      icon: '⊞',
-      description: 'Traditional grid layout'
-    }
+    { id: 'closet', name: 'Closet', icon: '🧥', description: 'Realistic closet experience' },
+    { id: 'gallery', name: 'Gallery', icon: '⊞', description: 'Compact grid and filters' },
+    { id: 'planner', name: 'Planner', icon: '📅', description: 'Outfit builder & calendar' }
   ];
 
   return (

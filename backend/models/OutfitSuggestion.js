@@ -95,7 +95,19 @@ const outfitSuggestionSchema = new mongoose.Schema(
       min: 0,
       max: 100,
       default: 50
-    }
+    },
+    // Comments thread between owner and stylist
+    comments: [
+      {
+        author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        role: { type: String, enum: ['owner', 'stylist'], required: true },
+        message: { type: String, trim: true, required: true },
+        createdAt: { type: Date, default: Date.now }
+      }
+    ],
+    // Planner support
+    plannedAt: { type: Date },
+    source: { type: String, enum: ['self', 'friend', 'system'], default: 'friend' }
   },
   { 
     timestamps: true,

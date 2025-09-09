@@ -232,10 +232,57 @@ export function rejectSuggestion(suggestionId, feedback = '') {
   });
 }
 
+export function deleteSuggestionApi(suggestionId) {
+  return apiRequest(`/suggestions/${suggestionId}`, { method: 'DELETE' });
+}
+
 export function getWardrobeForStyling(ownerId) {
   return apiRequest(`/suggestions/wardrobe/${ownerId}`);
 }
 
 export function getSuggestionStats() {
   return apiRequest('/suggestions/stats');
+}
+
+// Planner API
+export function createPlannedOutfitApi(body) {
+  return apiRequest('/suggestions/planner', {
+    method: 'POST',
+    body
+  });
+}
+
+export function listPlannedOutfitsApi(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  const url = '/suggestions/planner' + (query ? `?${query}` : '');
+  return apiRequest(url);
+}
+
+// Suggestion comments
+export function listSuggestionComments(suggestionId) {
+  return apiRequest(`/suggestions/${suggestionId}/comments`);
+}
+
+export function addSuggestionComment(suggestionId, message) {
+  return apiRequest(`/suggestions/${suggestionId}/comments`, {
+    method: 'POST',
+    body: { message }
+  });
+}
+
+// Collections
+export function listCollections() {
+  return apiRequest('/collections');
+}
+
+export function saveCollection(data) {
+  return apiRequest('/collections', { method: 'POST', body: data });
+}
+
+export function inviteToCollection(id, emails) {
+  return apiRequest(`/collections/${id}/invite`, { method: 'POST', body: { emails } });
+}
+
+export function listInvitedCollections() {
+  return apiRequest('/collections/invited/mine');
 }
