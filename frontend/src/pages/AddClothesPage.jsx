@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { getClothes, createCloth } from '../api';
+import { getImageUrl, getImageAlt } from '../utils/imageUtils';
 import { handleApiError } from '../utils/errorHandler';
 
 const UploadForm = lazy(() => import('../components/UploadForm'));
@@ -101,8 +102,8 @@ function AddClothesPage() {
             {clothes.slice(0, 6).map((cloth) => (
               <div key={cloth._id} className="text-center">
                 <img 
-                  src={`http://localhost:8000${cloth.imageUrl}`} 
-                  alt={cloth.name}
+                  src={getImageUrl(cloth.imageUrl)} 
+                  alt={getImageAlt(cloth)}
                   className="w-16 h-16 object-cover rounded-lg mx-auto mb-2"
                 />
                 <div className="text-xs text-gray-600 truncate">{cloth.name}</div>

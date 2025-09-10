@@ -8,6 +8,7 @@ import ItemDetailsPanel from '../components/ItemDetailsPanel';
 import WardrobeFooter from '../components/WardrobeFooter';
 import PlannerView from '../components/PlannerView';
 import WardrobeViewSwitcher from '../components/WardrobeViewSwitcher';
+import OutfitSuggestions from '../components/OutfitSuggestions';
 import Gallery from '../components/Gallery';
 
 function CompleteWardrobePage() {
@@ -287,6 +288,11 @@ function CompleteWardrobePage() {
               onAddToOutfit={handleAddToOutfit}
             />
           </div>
+        </div>
+
+        {/* Outfit Suggestions from friends/stylists */}
+        <div className="mt-6">
+          <OutfitSuggestions />
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getMySuggestions, acceptSuggestion, rejectSuggestion, listSuggestionComments, addSuggestionComment, deleteSuggestionApi } from '../api';
 import { handleApiError, showSuccess } from '../utils/errorHandler';
+import { getImageUrl, getImageAlt } from '../utils/imageUtils';
 
 function OutfitSuggestions() {
   const [suggestions, setSuggestions] = useState([]);
@@ -141,8 +142,8 @@ function OutfitSuggestions() {
             {suggestion.items.map((item) => (
               <div key={item._id} className="relative">
                 <img
-                  src={`http://localhost:8000${item.imageUrl}`}
-                  alt={item.name}
+                  src={getImageUrl(item.imageUrl)}
+                  alt={getImageAlt(item)}
                   className="w-full h-24 object-cover rounded-lg"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-2 rounded-b-lg">

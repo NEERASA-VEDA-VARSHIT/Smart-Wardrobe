@@ -286,3 +286,12 @@ export function inviteToCollection(id, emails) {
 export function listInvitedCollections() {
   return apiRequest('/collections/invited/mine');
 }
+
+// Single collection and delete
+export function getCollectionById(id) {
+  return apiRequest(`/collections/${id}`);
+}
+
+export function deleteCollectionById(id) {
+  return apiRequest(`/collections/${id}`, { method: 'DELETE' });
+}
