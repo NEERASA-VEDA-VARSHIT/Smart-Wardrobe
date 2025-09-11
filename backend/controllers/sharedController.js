@@ -2,6 +2,7 @@ import { Share } from '../models/Share.js';
 import { Cloth } from '../models/Cloth.js';
 import { Outfit } from '../models/Outfit.js';
 import { notifyOutfitSuggested, notifyOutfitResponse } from './notificationController.js';
+import { createSignedUrl } from '../config/supabase.js';
 import mongoose from 'mongoose';
 
 async function ensureAccess(userId, ownerId) {
@@ -38,8 +39,27 @@ export async function listSharedClothes(req, res) {
       return res.status(403).json({ success: false, message: 'Access denied' });
     }
     
-    const items = await Cloth.find({ userId: ownerId }).sort({ createdAt: -1 });
-    res.json({ success: true, data: items });
+    const items = await Cloth.find({ userId: ownerId }).sort({ createdAt: -1 }).lean();
+
+    // Replace public URLs with time-limited signed URLs for read-only access
+    const signedItems = await Promise.all(items.map(async (item) => {
+      if (item.imageUrl && item.imageUrl.includes('supabase.co')) {
+        try {
+          // Extract storage path from URL: .../object/public/wardrobe-images/<path>
+          const parts = item.imageUrl.split('/object/public/');
+          const path = parts[1]?.replace(/^wardrobe-images\//, '') || null;
+          if (path) {
+            const signed = await createSignedUrl(path);
+            if (signed.success) {
+              item.imageUrl = signed.url;
+            }
+          }
+        } catch (e) {}
+      }
+      return item;
+    }));
+
+    res.json({ success: true, data: signedItems });
   } catch (error) {
     console.error('listSharedClothes error:', error);
     res.status(500).json({ success: false, message: 'Failed to load shared clothes', error: error.message });

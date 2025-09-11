@@ -1,12 +1,26 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
+import config from '../config/production.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET = process.env.JWT_SECRET || config.jwt.secret;
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || config.jwt.refreshSecret;
 
-// Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+// Generate access token (short-lived)
+const generateAccessToken = (userId) => {
+  return jwt.sign(
+    { userId },
+    JWT_SECRET,
+    { expiresIn: config.jwt.expiresIn, issuer: config.jwt.issuer, audience: config.jwt.audience }
+  );
+};
+
+// Generate refresh token (longer-lived)
+const generateRefreshToken = (userId) => {
+  return jwt.sign(
+    { userId },
+    REFRESH_SECRET,
+    { expiresIn: config.jwt.refreshExpiresIn, issuer: config.jwt.issuer, audience: config.jwt.audience }
+  );
 };
 
 // Register new user
@@ -40,7 +54,8 @@ export async function register(req, res) {
 
     // Create new user
     const user = await User.create({ name, email, password });
-    const token = generateToken(user._id);
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
     res.status(201).json({
       success: true,
@@ -52,7 +67,8 @@ export async function register(req, res) {
           email: user.email,
           avatar: user.avatar
         },
-        token
+        accessToken,
+        refreshToken
       }
     });
   } catch (error) {
@@ -104,7 +120,8 @@ export async function login(req, res) {
       });
     }
 
-    const token = generateToken(user._id);
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
 
     res.json({
       success: true,
@@ -116,7 +133,8 @@ export async function login(req, res) {
           email: user.email,
           avatar: user.avatar
         },
-        token
+        accessToken,
+        refreshToken
       }
     });
   } catch (error) {
@@ -126,6 +144,31 @@ export async function login(req, res) {
       message: 'Login failed',
       error: error.message
     });
+  }
+}
+
+// Refresh access token
+export async function refreshToken(req, res) {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Refresh token required' });
+    }
+
+    const decoded = jwt.verify(token, REFRESH_SECRET);
+    const user = await User.findById(decoded.userId).select('-password');
+    if (!user || !user.isActive) {
+      return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+    }
+
+    const accessToken = generateAccessToken(user._id);
+    const newRefreshToken = generateRefreshToken(user._id);
+    res.json({ success: true, accessToken, refreshToken: newRefreshToken });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+    }
+    res.status(500).json({ success: false, message: 'Failed to refresh token' });
   }
 }
 

@@ -61,4 +61,38 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
+// Strategic indexes for optimal performance
+userSchema.index({ email: 1 }, { unique: true }); // Email lookup
+userSchema.index({ isActive: 1 }); // Active users
+userSchema.index({ createdAt: -1 }); // Recent users
+userSchema.index({ 'name': 'text', 'email': 'text' }); // Text search
+
+// Method to get user statistics
+userSchema.methods.getStats = async function() {
+  const Cloth = mongoose.model('Cloth');
+  const Collection = mongoose.model('Collection');
+  
+  const [clothCount, collectionCount] = await Promise.all([
+    Cloth.countDocuments({ userId: this._id }),
+    Collection.countDocuments({ ownerId: this._id, isActive: true })
+  ]);
+  
+  return {
+    clothCount,
+    collectionCount,
+    memberSince: this.createdAt
+  };
+};
+
+// Method to deactivate user (soft delete)
+userSchema.methods.deactivate = function() {
+  this.isActive = false;
+  return this.save();
+};
+
+// Static method to find active users
+userSchema.statics.findActive = function() {
+  return this.find({ isActive: true });
+};
+
 export const User = mongoose.model('User', userSchema);

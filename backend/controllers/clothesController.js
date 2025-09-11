@@ -4,8 +4,74 @@ import { uploadImageToSupabase, deleteImageFromSupabase, ensureBucketExists } fr
 export async function listClothes(req, res) {
   try {
     const userId = req.user._id;
-    const items = await Cloth.find({ userId }).sort({ lastWorn: -1, createdAt: -1 });
-    res.json({ success: true, data: items });
+    const { 
+      type, 
+      color, 
+      occasion, 
+      worn, 
+      needsCleaning, 
+      search,
+      sortBy = 'lastWorn',
+      sortOrder = 'desc',
+      limit,
+      page = 1
+    } = req.query;
+
+    // Build filter object
+    const filter = { userId };
+    
+    if (type) filter.type = { $regex: type, $options: 'i' };
+    if (color) filter.color = { $regex: color, $options: 'i' };
+    if (occasion) filter.occasion = { $regex: occasion, $options: 'i' };
+    if (worn !== undefined) filter.worn = worn === 'true';
+    if (needsCleaning !== undefined) filter.needsCleaning = needsCleaning === 'true';
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { type: { $regex: search, $options: 'i' } },
+        { color: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Build sort object
+    const sort = {};
+    if (sortBy === 'lastWorn') {
+      sort.lastWorn = sortOrder === 'desc' ? -1 : 1;
+    } else if (sortBy === 'createdAt') {
+      sort.createdAt = sortOrder === 'desc' ? -1 : 1;
+    } else if (sortBy === 'name') {
+      sort.name = sortOrder === 'desc' ? -1 : 1;
+    }
+
+    // Add secondary sort
+    if (sortBy !== 'lastWorn') {
+      sort.lastWorn = -1;
+    }
+    if (sortBy !== 'createdAt') {
+      sort.createdAt = -1;
+    }
+
+    // Execute query
+    let query = Cloth.find(filter).sort(sort);
+    
+    if (limit) {
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      query = query.skip(skip).limit(parseInt(limit));
+    }
+
+    const items = await query;
+    const total = await Cloth.countDocuments(filter);
+
+    res.json({ 
+      success: true, 
+      data: items,
+      pagination: limit ? {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      } : null
+    });
   } catch (error) {
     console.error('List clothes error:', error);
     res.status(500).json({ 
@@ -35,7 +101,7 @@ export async function createCloth(req, res) {
     }
 
     // Upload image to Supabase (store under clothes/<userId>/)
-    const uploadResult = await uploadImageToSupabase(req.file, 'wardrobe-images', `clothes/${userId}`);
+    const uploadResult = await uploadImageToSupabase(req.file, 'wardrobe-images', `clothes/${userId}`, userId);
     
     if (!uploadResult.success) {
       return res.status(500).json({
@@ -135,7 +201,7 @@ export async function updateCloth(req, res) {
       }
 
       // Upload new image to Supabase (store under clothes/<userId>/)
-      const uploadResult = await uploadImageToSupabase(req.file, 'wardrobe-images', `clothes/${userId}`);
+      const uploadResult = await uploadImageToSupabase(req.file, 'wardrobe-images', `clothes/${userId}`, userId);
       
       if (!uploadResult.success) {
         return res.status(500).json({
@@ -221,6 +287,102 @@ export async function deleteCloth(req, res) {
       success: false, 
       message: 'Failed to delete cloth item',
       error: error.message 
+    });
+  }
+}
+
+// Bulk update endpoints
+export async function bulkUpdateClothes(req, res) {
+  try {
+    const { updates } = req.body;
+    const userId = req.user._id;
+
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Updates array is required and must not be empty'
+      });
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const update of updates) {
+      try {
+        const { id, ...updateData } = update;
+        
+        // Validate that the item belongs to the user
+        const item = await Cloth.findOne({ _id: id, userId });
+        if (!item) {
+          errors.push({ id, error: 'Item not found or access denied' });
+          continue;
+        }
+
+        const updatedItem = await Cloth.findByIdAndUpdate(
+          id,
+          { ...updateData, updatedAt: new Date() },
+          { new: true, runValidators: true }
+        );
+
+        results.push(updatedItem);
+      } catch (error) {
+        errors.push({ id: update.id, error: error.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Updated ${results.length} items successfully`,
+      data: results,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Bulk update clothes error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to bulk update clothes',
+      error: error.message
+    });
+  }
+}
+
+// PATCH endpoint for minimal updates
+export async function patchCloth(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id;
+    const updates = req.body;
+
+    // Remove fields that shouldn't be updated directly
+    delete updates._id;
+    delete updates.userId;
+    delete updates.createdAt;
+    delete updates.imageUrl; // Use separate endpoint for image updates
+
+    const item = await Cloth.findOneAndUpdate(
+      { _id: id, userId },
+      { ...updates, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Cloth item not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Cloth item updated successfully',
+      data: item
+    });
+  } catch (error) {
+    console.error('Patch cloth error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update cloth item',
+      error: error.message
     });
   }
 }

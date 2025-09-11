@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { listClothes, createCloth, updateCloth, deleteCloth } from '../controllers/clothesController.js';
+import { listClothes, createCloth, updateCloth, deleteCloth, bulkUpdateClothes, patchCloth } from '../controllers/clothesController.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { uploadRateLimit } from '../middleware/security.js';
 
 const router = Router();
 
@@ -24,8 +25,12 @@ const upload = multer({
 
 // All routes require authentication
 router.get('/', authenticateToken, listClothes);
-router.post('/', authenticateToken, upload.single('image'), createCloth);
-router.put('/:id', authenticateToken, upload.single('image'), updateCloth);
+router.post('/', authenticateToken, uploadRateLimit, upload.single('image'), createCloth);
+router.put('/:id', authenticateToken, uploadRateLimit, upload.single('image'), updateCloth);
+router.patch('/:id', authenticateToken, patchCloth);
 router.delete('/:id', authenticateToken, deleteCloth);
+
+// Bulk operations
+router.patch('/bulk', authenticateToken, bulkUpdateClothes);
 
 export default router;
