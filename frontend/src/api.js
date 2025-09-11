@@ -23,7 +23,18 @@ async function handleResponse(res) {
   
   if (!res.ok) {
     if (res.status === 401) {
+      // Attempt refresh token flow if available
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken && !res._retried) {
+        const refreshed = await tryRefreshToken(refreshToken);
+        if (refreshed) {
+          // Mark response as retried and rethrow to trigger outer retry
+          res._retried = true;
+          throw new Error('RETRY_AFTER_REFRESH');
+        }
+      }
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
@@ -45,8 +56,67 @@ async function apiRequest(endpoint, options = {}) {
     config.body = JSON.stringify(config.body);
   }
   
-  const response = await fetch(url, config);
-  return handleResponse(response);
+  // Basic retry with backoff for transient errors
+  const maxRetries = 2;
+  let attempt = 0;
+  let lastError;
+
+  while (attempt <= maxRetries) {
+    try {
+      const response = await fetch(url, config);
+      return await handleResponse(response);
+    } catch (e) {
+      if (e.message === 'RETRY_AFTER_REFRESH') {
+        // Token refreshed. Update headers and retry immediately.
+        const existingHeaders = config.headers || {};
+        const authHeaders = getAuthHeaders();
+        config.headers = { ...existingHeaders, ...authHeaders };
+        // Ensure Content-Type remains for JSON bodies
+        if (typeof config.body === 'string' && !('Content-Type' in config.headers)) {
+          config.headers['Content-Type'] = 'application/json';
+        }
+        attempt++;
+        continue;
+      }
+      // Retry on network errors / 5xx
+      const retriable = e.name === 'TypeError' || /5\d\d/.test(e.message);
+      if (attempt < maxRetries && retriable) {
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1))); // backoff
+        attempt++;
+        lastError = e;
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastError || new Error('Network error');
+}
+
+// Store tokens after login/register
+export function storeAuthTokens(accessToken, refreshToken, user) {
+  if (accessToken) localStorage.setItem('token', accessToken);
+  if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+  if (user) localStorage.setItem('user', JSON.stringify(user));
+}
+
+async function tryRefreshToken(refreshToken) {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: refreshToken })
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data?.success && data.accessToken) {
+      localStorage.setItem('token', data.accessToken);
+      if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 // Authentication API
@@ -76,8 +146,21 @@ export function updateProfile(userData) {
 }
 
 // Clothes API (with images) - now requires authentication
-export function getClothes() {
-  return apiRequest('/clothes');
+export function getClothes(filters = {}) {
+  const queryParams = new URLSearchParams();
+  
+  // Add filters to query string
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, value);
+    }
+  });
+
+  const url = queryParams.toString() 
+    ? `/clothes?${queryParams.toString()}`
+    : '/clothes';
+
+  return apiRequest(url);
 }
 
 export function createCloth(formData) {
@@ -97,6 +180,28 @@ export function updateCloth(id, formData) {
 export function deleteCloth(id) {
   return apiRequest(`/clothes/${id}`, { 
     method: 'DELETE',
+  });
+}
+
+// PATCH for minimal updates (e.g., toggle worn/needsCleaning)
+export function patchCloth(id, updates) {
+  return apiRequest(`/clothes/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
+// Bulk update multiple clothes at once
+export function bulkUpdateClothes(updates) {
+  return apiRequest('/clothes/bulk', {
+    method: 'PATCH',
+    body: JSON.stringify({ updates }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
   });
 }
 

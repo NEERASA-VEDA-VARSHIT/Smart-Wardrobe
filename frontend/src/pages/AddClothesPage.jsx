@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { getClothes, createCloth } from '../api';
 import { getImageUrl, getImageAlt } from '../utils/imageUtils';
 import { handleApiError } from '../utils/errorHandler';
+import OptimizedImageUpload from '../components/OptimizedImageUpload';
+import StorageMonitor from '../components/StorageMonitor';
 
 const UploadForm = lazy(() => import('../components/UploadForm'));
 

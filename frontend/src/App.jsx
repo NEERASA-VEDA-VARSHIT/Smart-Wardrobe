@@ -1,19 +1,28 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { withLazyLoad } from "./utils/lazyLoad.jsx";
+import { usePerformanceMonitor } from "./hooks/usePerformanceMonitor";
 import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
-import WardrobePage from "./pages/WardrobePage";
-import CompleteWardrobePage from "./pages/CompleteWardrobePage";
-import AddClothesPage from "./pages/AddClothesPage";
-import CollaborationPage from "./pages/CollaborationPage";
-import OutfitReviewPage from "./pages/OutfitReviewPage";
-import StylistPage from "./pages/StylistPage";
-import ProfilePage from "./pages/ProfilePage";
 import "./index.css";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Lazy load pages for better performance
+const WardrobePage = withLazyLoad(() => import("./pages/WardrobePage"));
+const CompleteWardrobePage = withLazyLoad(() => import("./pages/CompleteWardrobePage"));
+const AddClothesPage = withLazyLoad(() => import("./pages/AddClothesPage"));
+const CollaborationPage = withLazyLoad(() => import("./pages/CollaborationPage"));
+const OutfitReviewPage = withLazyLoad(() => import("./pages/OutfitReviewPage"));
+const StylistPage = withLazyLoad(() => import("./pages/StylistPage"));
+const ProfilePage = withLazyLoad(() => import("./pages/ProfilePage"));
 
 function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  
+  // Performance monitoring
+  usePerformanceMonitor('App');
 
   // Check for existing authentication on app load
   useEffect(() => {
@@ -62,6 +71,7 @@ function App() {
   return (
     <Router>
       <Layout user={user} onLogout={handleLogout}>
+        <ToastContainer newestOnTop closeOnClick pauseOnHover theme="light" />
         <Routes>
           <Route path="/" element={<CompleteWardrobePage />} />
           <Route path="/classic" element={<WardrobePage />} />

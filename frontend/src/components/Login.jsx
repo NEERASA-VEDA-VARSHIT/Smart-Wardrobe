@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { login } from '../api';
+import { login, storeAuthTokens } from '../api';
 
 export default function Login({ onLogin }) {
   const [formData, setFormData] = useState({
@@ -23,11 +23,9 @@ export default function Login({ onLogin }) {
 
     try {
       const response = await login(formData);
-      // Store token and user data
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      
-      onLogin(response.data.user);
+      const { accessToken, refreshToken, user } = response.data || {};
+      storeAuthTokens(accessToken, refreshToken, user);
+      onLogin(user);
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message);

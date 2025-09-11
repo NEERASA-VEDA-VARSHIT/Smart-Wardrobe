@@ -1,13 +1,13 @@
+import { toast } from 'react-toastify';
+
 // Simple error handling utility
 export const showError = (message, error = null) => {
   console.error(message, error);
-  // For now, we'll use a simple alert, but this could be replaced with a toast notification system
-  alert(message);
+  toast.error(message, { position: 'bottom-right', autoClose: 4000 });
 };
 
 export const showSuccess = (message) => {
-  // For now, we'll use a simple alert, but this could be replaced with a toast notification system
-  alert(message);
+  toast.success(message, { position: 'bottom-right', autoClose: 2500 });
 };
 
 // API error handler
