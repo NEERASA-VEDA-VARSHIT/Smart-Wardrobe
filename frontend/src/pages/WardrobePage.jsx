@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, useCallback } from 'react';
 import { getClothes, updateCloth, deleteCloth } from '../api';
 import { handleApiError } from '../utils/errorHandler';
 
@@ -44,7 +44,7 @@ function WardrobePage() {
   }, []);
 
 
-  const markWorn = async (id) => {
+  const markWorn = useCallback(async (id) => {
     try {
       const cloth = clothes.find(c => c._id === id);
       const formData = new FormData();
@@ -65,9 +65,9 @@ function WardrobePage() {
     } catch (error) {
       handleApiError(error, 'Failed to update item status');
     }
-  };
+  }, [clothes]);
 
-  const toggleWash = async (id) => {
+  const toggleWash = useCallback(async (id) => {
     try {
       const cloth = clothes.find(c => c._id === id);
       const formData = new FormData();
@@ -88,9 +88,9 @@ function WardrobePage() {
     } catch (error) {
       handleApiError(error, 'Failed to update wash status');
     }
-  };
+  }, [clothes]);
 
-  const removeCloth = async (id) => {
+  const removeCloth = useCallback(async (id) => {
     try {
       await deleteCloth(id);
       setClothes((prev) => prev.filter((c) => c._id !== id));
@@ -98,7 +98,7 @@ function WardrobePage() {
     } catch (error) {
       handleApiError(error, 'Failed to delete item');
     }
-  };
+  }, []);
 
   const handleFilterChange = (filters) => {
     let filtered = [...clothes];

@@ -1,9 +1,11 @@
+import { memo, useCallback } from 'react';
 import { getImageUrl, getImageAlt } from '../utils/imageUtils';
+import LazyImage from './LazyImage';
 
-function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
+const ClothCard = memo(({ cloth, onMarkWorn, onToggleWash, onDelete }) => {
   console.log('ClothCard rendering with cloth:', cloth.name, 'worn:', cloth.worn, 'needsCleaning:', cloth.needsCleaning);
   
-  const formatDate = (value) => {
+  const formatDate = useCallback((value) => {
     if (!value) return "Never worn";
     try { 
       const date = new Date(value);
@@ -16,28 +18,30 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
       if (diffDays <= 7) return `${diffDays - 1} days ago`;
       return date.toLocaleDateString();
     } catch { return "Invalid date"; }
-  };
+  }, []);
 
-  const getStatusColor = () => {
+  const getStatusColor = useCallback(() => {
     if (cloth.worn) return "bg-yellow-100 text-yellow-800"; // Currently being worn
     if (cloth.needsCleaning) return "bg-red-100 text-red-800"; // Needs cleaning
     return "bg-green-100 text-green-800"; // Clean and ready
-  };
+  }, [cloth.worn, cloth.needsCleaning]);
 
-  const getStatusText = () => {
+  const getStatusText = useCallback(() => {
     if (cloth.worn) return "Currently Worn";
     if (cloth.needsCleaning) return "Needs Cleaning";
     return "Clean & Ready";
-  };
+  }, [cloth.worn, cloth.needsCleaning]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
       {/* Image Container */}
       <div className="relative">
-        <img
+        <LazyImage
           src={getImageUrl(cloth.imageUrl)}
           alt={getImageAlt(cloth)}
           className="w-full h-48 object-cover"
+          width={400}
+          height={192}
         />
         
         {/* Status Badge */}
@@ -148,6 +152,17 @@ function ClothCard({ cloth, onMarkWorn, onToggleWash, onDelete }) {
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  const prev = prevProps.cloth;
+  const next = nextProps.cloth;
+  // Re-render only if identity or relevant fields changed, or handlers changed
+  const sameId = prev._id === next._id;
+  const sameCore = prev.worn === next.worn && prev.needsCleaning === next.needsCleaning && prev.lastWorn === next.lastWorn;
+  const sameMeta = prev.name === next.name && prev.type === next.type && prev.color === next.color && prev.occasion === next.occasion && prev.imageUrl === next.imageUrl;
+  const sameHandlers = prevProps.onMarkWorn === nextProps.onMarkWorn && prevProps.onToggleWash === nextProps.onToggleWash && prevProps.onDelete === nextProps.onDelete;
+  return sameId && sameCore && sameMeta && sameHandlers;
+});
+
+ClothCard.displayName = 'ClothCard';
 
 export default ClothCard;
