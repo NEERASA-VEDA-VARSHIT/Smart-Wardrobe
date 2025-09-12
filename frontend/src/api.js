@@ -12,7 +12,7 @@ function getAuthHeaders() {
 }
 
 // Enhanced API response handler
-async function handleResponse(res) {
+async function handleResponse(res, { disableAuthRedirect } = {}) {
   let data;
   try {
     data = await res.json();
@@ -23,6 +23,9 @@ async function handleResponse(res) {
   
   if (!res.ok) {
     if (res.status === 401) {
+      if (disableAuthRedirect) {
+        throw new Error(data.message || 'Unauthorized');
+      }
       // Attempt refresh token flow if available
       const refreshToken = localStorage.getItem('refreshToken');
       if (refreshToken && !res._retried) {
@@ -64,7 +67,7 @@ async function apiRequest(endpoint, options = {}) {
   while (attempt <= maxRetries) {
     try {
       const response = await fetch(url, config);
-      return await handleResponse(response);
+      return await handleResponse(response, { disableAuthRedirect: options.disableAuthRedirect });
     } catch (e) {
       if (e.message === 'RETRY_AFTER_REFRESH') {
         // Token refreshed. Update headers and retry immediately.
@@ -124,6 +127,7 @@ export function register(userData) {
   return apiRequest('/auth/register', {
     method: 'POST',
     body: userData,
+    disableAuthRedirect: true,
   });
 }
 
@@ -131,6 +135,7 @@ export function login(credentials) {
   return apiRequest('/auth/login', {
     method: 'POST',
     body: credentials,
+    disableAuthRedirect: true,
   });
 }
 

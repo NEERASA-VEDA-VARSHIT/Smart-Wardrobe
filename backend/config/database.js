@@ -3,7 +3,27 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-wardrobe';
+const RAW_MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_DB = process.env.MONGODB_DB;
+
+function appendDbIfMissing(uri, dbName) {
+  if (!dbName) return uri;
+  // If URI already contains a path segment (database name), return as-is
+  // Matches ...mongodb.net/<something> or mongodb://host:port/<something>
+  const hasDbPath = /mongodb(?:\+srv)?:\/\/.+\/[^?]+/.test(uri);
+  if (hasDbPath) return uri;
+
+  // Insert /<dbName> before the query string if present
+  const qIndex = uri.indexOf('?');
+  if (qIndex === -1) {
+    return uri.endsWith('/') ? `${uri}${dbName}` : `${uri}/${dbName}`;
+  }
+  const base = uri.slice(0, qIndex);
+  const query = uri.slice(qIndex); // includes '?'
+  return base.endsWith('/') ? `${base}${dbName}${query}` : `${base}/${dbName}${query}`;
+}
+
+const MONGODB_URI = appendDbIfMissing(RAW_MONGODB_URI, MONGODB_DB);
 
 // Connection options optimized for free tier
 const connectionOptions = {
