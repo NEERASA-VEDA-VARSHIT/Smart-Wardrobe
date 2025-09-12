@@ -3,8 +3,12 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabaseUrl = 'https://nqyoczcowkrvrchqktpx.supabase.co';
+const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl) {
+  throw new Error('SUPABASE_URL is not defined in environment variables');
+}
 
 if (!supabaseKey) {
   throw new Error('SUPABASE_KEY is not defined in environment variables');
