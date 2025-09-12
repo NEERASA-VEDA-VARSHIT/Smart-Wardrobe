@@ -1,5 +1,7 @@
 import { Cloth } from '../models/Cloth.js';
 import { uploadImageToSupabase, deleteImageFromSupabase, ensureBucketExists } from '../config/supabase.js';
+import { buildDescriptionFromMetadata, generateEmbeddingFromText } from '../utils/embeddings.js';
+import { generateClothingMetadataFromImage } from '../utils/metadata.js';
 
 export async function listClothes(req, res) {
   try {
@@ -132,6 +134,170 @@ export async function createCloth(req, res) {
       message: 'Failed to create cloth item',
       error: error.message 
     });
+  }
+}
+
+// Generate metadata draft from minimal inputs (image + sparse fields)
+export async function generateMetadataDraft(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'image is required' });
+    }
+    const { mimetype, buffer } = req.file;
+    let draft;
+    if (req.body?.manualFirst === 'true') {
+      // Return empty draft so UI shows manual edit immediately
+      draft = { name: '', type: '', color: '', pattern: '', material: '', occasion: '', season: '', formality: '', weather: '' };
+    } else {
+      const hints = {
+        type: req.body?.type || '',
+        color: req.body?.color || '',
+        occasion: req.body?.occasion || ''
+      };
+      draft = await generateClothingMetadataFromImage(buffer, mimetype, hints);
+    }
+    // If user provided a name, prefer it; else try filename basename; else model
+    const providedName = req.body?.name?.trim();
+    if (!draft.name) {
+      const fileName = req.file?.originalname || '';
+      const baseName = fileName.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+      draft.name = providedName || baseName || 'Clothing Item';
+    } else if (providedName) {
+      draft.name = providedName;
+    }
+    return res.json({ success: true, data: draft });
+  } catch (error) {
+    console.error('Metadata draft error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate metadata draft' });
+  }
+}
+
+// Confirm metadata: build description, embed, persist as new cloth
+export async function confirmMetadata(req, res) {
+  try {
+    const userId = req.user._id;
+    const { name, type, color, occasion = 'casual', pattern, material, season, formality } = req.body;
+
+    if (!name || !type || !color || !req.file) {
+      return res.status(400).json({ success: false, message: 'name, type, color and image are required' });
+    }
+
+    // Upload image first
+    const uploadResult = await uploadImageToSupabase(req.file, 'wardrobe-images', `clothes/${userId}`, userId);
+    if (!uploadResult.success) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Failed to upload image', 
+        error: uploadResult.error,
+        details: 'Please ensure the Supabase bucket "wardrobe-images" exists and is accessible. Check your Supabase dashboard.'
+      });
+    }
+
+    const metadata = { name, type, color, occasion, pattern, material, season, formality };
+    const description = buildDescriptionFromMetadata(metadata);
+
+    // Optional embedding (best-effort)
+    let embedding;
+    const shouldEmbed = (req.query.embed === 'true') || (req.body.embed === 'true');
+    if (shouldEmbed) {
+      try {
+        embedding = await generateEmbeddingFromText(description);
+      } catch (e) {
+        console.warn('Embedding generation failed (continuing without vector):', e.message);
+      }
+    }
+
+    const item = await Cloth.create({
+      name,
+      type,
+      color,
+      occasion,
+      description,
+      imageUrl: uploadResult.url,
+      worn: false,
+      lastWorn: null,
+      needsCleaning: false,
+      embedding,
+      userId,
+      metadata: {
+        ...(metadata || {}),
+        uploadDate: new Date()
+      }
+    });
+
+    return res.status(201).json({ success: true, data: item });
+  } catch (error) {
+    console.error('Confirm metadata error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to confirm metadata', error: error.message });
+  }
+}
+
+// Generate or regenerate embedding for an item
+export async function generateEmbeddingForCloth(req, res) {
+  try {
+    const userId = req.user._id;
+    const { id } = req.params;
+    const cloth = await Cloth.findOne({ _id: id, userId });
+    if (!cloth) return res.status(404).json({ success: false, message: 'Item not found' });
+
+    const description = cloth.description || buildDescriptionFromMetadata(cloth.metadata || {});
+    const embedding = await generateEmbeddingFromText(description);
+    cloth.embedding = embedding;
+    await cloth.save();
+    return res.json({ success: true, data: { id: cloth._id, embeddingLength: embedding.length } });
+  } catch (error) {
+    console.error('Generate embedding error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate embedding' });
+  }
+}
+
+// Vector search endpoint using MongoDB Atlas Vector Search
+export async function searchClothesByVector(req, res) {
+  try {
+    const userId = req.user._id;
+    const { queryText, limit = 10, filter = {} } = req.body || {};
+    if (!queryText) return res.status(400).json({ success: false, message: 'queryText is required' });
+
+    const embedding = await generateEmbeddingFromText(queryText);
+    const k = Math.max(1, Math.min(100, Number(limit)));
+
+    // Optional metadata filters applied in the pipeline
+    const metadataFilter = { userId };
+    if (filter.season) metadataFilter['metadata.season'] = new RegExp(filter.season, 'i');
+    if (filter.formality) metadataFilter['metadata.formality'] = new RegExp(filter.formality, 'i');
+    if (filter.weather) metadataFilter['metadata.weather'] = new RegExp(filter.weather, 'i');
+
+    const pipeline = [
+      {
+        $vectorSearch: {
+          index: 'cloth_embedding_index',
+          path: 'embedding',
+          queryVector: embedding,
+          numCandidates: Math.max(k * 5, 100),
+          limit: k,
+          filter: metadataFilter
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          type: 1,
+          color: 1,
+          occasion: 1,
+          imageUrl: 1,
+          description: 1,
+          metadata: 1,
+          _id: 1,
+          score: { $meta: 'vectorSearchScore' }
+        }
+      }
+    ];
+
+    const results = await Cloth.aggregate(pipeline).exec();
+    return res.json({ success: true, data: results });
+  } catch (error) {
+    console.error('Vector search error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to perform vector search' });
   }
 }
 

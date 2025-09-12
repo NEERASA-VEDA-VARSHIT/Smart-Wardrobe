@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { listClothes, createCloth, updateCloth, deleteCloth, bulkUpdateClothes, patchCloth } from '../controllers/clothesController.js';
+import { listClothes, createCloth, updateCloth, deleteCloth, bulkUpdateClothes, patchCloth, generateMetadataDraft, confirmMetadata, generateEmbeddingForCloth, searchClothesByVector } from '../controllers/clothesController.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { uploadRateLimit } from '../middleware/security.js';
 
@@ -26,6 +26,11 @@ const upload = multer({
 // All routes require authentication
 router.get('/', authenticateToken, listClothes);
 router.post('/', authenticateToken, uploadRateLimit, upload.single('image'), createCloth);
+// Draft and confirmation flow
+router.post('/metadata-draft', authenticateToken, uploadRateLimit, upload.single('image'), generateMetadataDraft);
+router.post('/confirm', authenticateToken, uploadRateLimit, upload.single('image'), confirmMetadata);
+router.post('/:id/embed', authenticateToken, generateEmbeddingForCloth);
+router.post('/search-vector', authenticateToken, searchClothesByVector);
 router.put('/:id', authenticateToken, uploadRateLimit, upload.single('image'), updateCloth);
 router.patch('/:id', authenticateToken, patchCloth);
 router.delete('/:id', authenticateToken, deleteCloth);

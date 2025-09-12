@@ -6,6 +6,8 @@ const clothSchema = new mongoose.Schema(
     type: { type: String, required: true, trim: true, maxlength: 50 },
     color: { type: String, required: true, trim: true, maxlength: 50 },
     occasion: { type: String, default: 'casual', trim: true, maxlength: 50 },
+    // Human-readable description built from confirmed metadata
+    description: { type: String, trim: true, maxlength: 400 },
     imageUrl: { type: String, required: true, maxlength: 500 },
     worn: { type: Boolean, default: false },
     lastWorn: { type: Date, default: null },

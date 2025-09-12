@@ -15,8 +15,8 @@ const connectionOptions = {
   socketTimeoutMS: 45000, // How long a send or receive on a socket can take
   
   // Performance optimizations
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+  // useNewUrlParser: true, // Deprecated in newer versions
+  // useUnifiedTopology: true, // Deprecated in newer versions
   
   // Write concern for better performance
   writeConcern: {
@@ -34,7 +34,17 @@ const connectionOptions = {
   
   // Connection retry
   retryWrites: true,
-  retryReads: true
+  retryReads: true,
+  
+  // SSL/TLS configuration for Atlas
+  tls: true,
+  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidHostnames: false,
+  
+  // Connection timeout and retry
+  connectTimeoutMS: 10000,
+  serverSelectionTimeoutMS: 10000,
+  heartbeatFrequencyMS: 10000
 };
 
 // Connection state tracking

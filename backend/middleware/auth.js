@@ -1,7 +1,33 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
+import config from '../config/production.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || config.jwt.secret;
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || config.jwt.refreshSecret;
+
+export const signAccessToken = (user) => {
+  return jwt.sign(
+    { userId: user._id },
+    JWT_SECRET,
+    {
+      expiresIn: config.jwt.expiresIn,
+      issuer: config.jwt.issuer,
+      audience: config.jwt.audience
+    }
+  );
+};
+
+export const signRefreshToken = (user) => {
+  return jwt.sign(
+    { userId: user._id },
+    REFRESH_SECRET,
+    {
+      expiresIn: config.jwt.refreshExpiresIn,
+      issuer: config.jwt.issuer,
+      audience: config.jwt.audience
+    }
+  );
+};
 
 export const authenticateToken = async (req, res, next) => {
   try {
