@@ -177,6 +177,37 @@ export function updateCloth(id, formData) {
   });
 }
 
+// Metadata draft (image + minimal fields) → returns draft metadata only
+export function createMetadataDraft(formData) {
+  return apiRequest('/clothes/metadata-draft', {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+// Confirm metadata: send final fields and image to persist + embed
+export function confirmClothMetadata(formData) {
+  const embed = formData.get('embed') === 'true';
+  const endpoint = embed ? '/clothes/confirm?embed=true' : '/clothes/confirm';
+  return apiRequest(endpoint, {
+    method: 'POST',
+    body: formData,
+  });
+}
+
+export function regenerateEmbedding(itemId) {
+  return apiRequest(`/clothes/${itemId}/embed`, {
+    method: 'POST'
+  });
+}
+
+export function vectorSearch(queryText, filter = {}, limit = 10) {
+  return apiRequest('/clothes/search-vector', {
+    method: 'POST',
+    body: { queryText, filter, limit }
+  });
+}
+
 export function deleteCloth(id) {
   return apiRequest(`/clothes/${id}`, { 
     method: 'DELETE',

@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
-function UploadForm({ onAddItem }) {
+function UploadForm({ onAddItem, isSubmitting = false }) {
   const [imagePreview, setImagePreview] = useState(null);
+  const [manualFirst, setManualFirst] = useState(false);
+  const formRef = useRef(null);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -14,77 +16,63 @@ function UploadForm({ onAddItem }) {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    onAddItem(formData);
-    e.target.reset();
+  const handleSubmit = async (e, manualFlag) => {
+    e?.preventDefault?.();
+    const form = formRef.current || (e?.currentTarget?.closest ? e.currentTarget.closest('form') : e?.currentTarget) || e?.currentTarget || e?.target;
+    const fileInput = form?.querySelector('input[name="image"]');
+    const originalFile = fileInput?.files?.[0];
+    if (!originalFile) return;
+
+    // Client-side compression to ~1280px JPEG, quality ~0.82
+    const compressImage = (file) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1280;
+        let { width, height } = img;
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > width && height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+            resolve(compressed);
+          },
+          'image/jpeg',
+          0.82
+        );
+      };
+      const reader = new FileReader();
+      reader.onload = () => { img.src = reader.result; };
+      reader.readAsDataURL(file);
+    });
+
+    const compressedFile = await compressImage(originalFile).catch(() => originalFile);
+
+    const formData = new FormData();
+    formData.append('image', compressedFile);
+    if (manualFlag) formData.append('manualFirst', 'true');
+    await onAddItem(formData);
+    form.reset();
     setImagePreview(null);
   };
+
+  const handleSubmitAI = (e) => handleSubmit(e, false);
+  const handleSubmitManual = (e) => handleSubmit(e, true);
 
   return (
     <div className="card animate-fade-in">
       <h2 className="text-2xl font-semibold text-gray-800 mb-6">Add New Clothing Item</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
-          <input 
-            type="text" 
-            name="name" 
-            placeholder="e.g., Blue Jeans, White T-Shirt" 
-            required 
-            className="input-field"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-          <select 
-            name="type" 
-            required 
-            className="select-field"
-          >
-            <option value="">Select type...</option>
-            <option value="shirt">Shirt</option>
-            <option value="pants">Pants</option>
-            <option value="jacket">Jacket</option>
-            <option value="shoes">Shoes</option>
-            <option value="dress">Dress</option>
-            <option value="accessory">Accessory</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
-          <input 
-            type="text" 
-            name="color" 
-            placeholder="e.g., Blue, Red, Black" 
-            required 
-            className="input-field"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Occasion</label>
-          <select 
-            name="occasion" 
-            className="select-field"
-            defaultValue="casual"
-          >
-            <option value="casual">Casual</option>
-            <option value="formal">Formal</option>
-            <option value="party">Party</option>
-            <option value="workout">Workout</option>
-            <option value="business">Business</option>
-            <option value="date">Date Night</option>
-            <option value="travel">Travel</option>
-            <option value="beach">Beach</option>
-            <option value="winter">Winter</option>
-            <option value="summer">Summer</option>
-          </select>
-        </div>
-
+      {/* Minimal upload-only form. Choose AI analysis or Manual first. */}
+      <form ref={formRef} onSubmit={handleSubmitAI} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Upload Photo</label>
           <input 
@@ -94,6 +82,7 @@ function UploadForm({ onAddItem }) {
             required 
             onChange={handleImageChange}
             className="input-field"
+            disabled={isSubmitting}
           />
           
           {imagePreview && (
@@ -108,12 +97,24 @@ function UploadForm({ onAddItem }) {
           )}
         </div>
 
-        <button 
-          type="submit" 
-          className="w-full btn-primary"
-        >
-          Add to Wardrobe
-        </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button 
+            type="submit" 
+            className="w-full btn-primary disabled:opacity-60"
+            disabled={isSubmitting}
+            onClick={() => setManualFirst(false)}
+          >
+            {isSubmitting ? 'Analyzing…' : 'Analyze with AI'}
+          </button>
+          <button 
+            type="button" 
+            className="w-full btn-secondary disabled:opacity-60"
+            disabled={isSubmitting}
+            onClick={handleSubmitManual}
+          >
+            {isSubmitting ? 'Preparing…' : 'Enter Manually'}
+          </button>
+        </div>
       </form>
     </div>
   );

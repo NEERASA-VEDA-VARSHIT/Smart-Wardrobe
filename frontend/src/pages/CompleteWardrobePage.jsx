@@ -6,6 +6,7 @@ import WardrobeHeader from '../components/WardrobeHeader';
 import WardrobeCloset from '../components/WardrobeCloset';
 import ItemDetailsPanel from '../components/ItemDetailsPanel';
 import WardrobeFooter from '../components/WardrobeFooter';
+import VectorSearch from '../components/VectorSearch';
 import PlannerView from '../components/PlannerView';
 import WardrobeViewSwitcher from '../components/WardrobeViewSwitcher';
 import OutfitSuggestions from '../components/OutfitSuggestions';
@@ -288,6 +289,11 @@ function CompleteWardrobePage() {
               onAddToOutfit={handleAddToOutfit}
             />
           </div>
+        </div>
+
+        {/* Vector Search (Preview) */}
+        <div className="mt-6">
+          <VectorSearch />
         </div>
 
         {/* Outfit Suggestions from friends/stylists */}

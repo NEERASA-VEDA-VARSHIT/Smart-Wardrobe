@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { regenerateEmbedding } from '../api';
 import { getImageUrl, getImageAlt } from '../utils/imageUtils';
 
 function ItemDetailsPanel({ selectedItem, onMarkWorn, onToggleWash, onDelete, onAddToOutfit }) {
@@ -157,6 +158,26 @@ function ItemDetailsPanel({ selectedItem, onMarkWorn, onToggleWash, onDelete, on
         <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
           <h5 className="text-sm font-medium text-gray-700">More Actions</h5>
           
+          <button
+            onClick={async () => {
+              try {
+                const btn = document.activeElement;
+                if (btn) btn.disabled = true;
+                await regenerateEmbedding(selectedItem._id);
+                alert('Embedding regenerated successfully');
+              } catch (e) {
+                alert('Failed to regenerate embedding');
+              } finally {
+                const btn = document.activeElement;
+                if (btn) btn.disabled = false;
+              }
+            }}
+            className="w-full flex items-center justify-center space-x-2 py-2 px-3 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            <span>🔁</span>
+            <span>Regenerate Embedding</span>
+          </button>
+
           <button
             onClick={() => {
               if (window.confirm('Are you sure you want to delete this item?')) {

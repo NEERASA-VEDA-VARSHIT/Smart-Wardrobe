@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { getClothes, createCloth } from '../api';
+// Minimal upload → AI draft → confirm
+import { getClothes, createMetadataDraft, confirmClothMetadata } from '../api';
 import { getImageUrl, getImageAlt } from '../utils/imageUtils';
 import { handleApiError } from '../utils/errorHandler';
 import OptimizedImageUpload from '../components/OptimizedImageUpload';
@@ -10,6 +11,11 @@ const UploadForm = lazy(() => import('../components/UploadForm'));
 function AddClothesPage() {
   const [clothes, setClothes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [draft, setDraft] = useState(null);
+  const [draftImageFile, setDraftImageFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [embedNow, setEmbedNow] = useState(true);
 
   const loadClothes = async () => {
     setLoading(true);
@@ -29,10 +35,48 @@ function AddClothesPage() {
 
   const addCloth = async (formData) => {
     try {
-      const res = await createCloth(formData);
-      setClothes((prev) => [...prev, res.data]);
+      setSubmitting(true);
+      const imageFile = formData.get('image');
+      setDraftImageFile(imageFile || null);
+      const res = await createMetadataDraft(formData);
+      if (res?.success) {
+        setDraft(res.data);
+      }
     } catch (error) {
-      handleApiError(error, 'Failed to add item');
+      handleApiError(error, 'Failed to analyze photo');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const confirmCloth = async (e) => {
+    e?.preventDefault?.();
+    if (!draft || !draftImageFile) return;
+    try {
+      setSubmitting(true);
+      const fd = new FormData();
+      fd.append('name', draft.name || '');
+      fd.append('type', draft.type || '');
+      fd.append('color', draft.color || '');
+      if (draft.occasion) fd.append('occasion', draft.occasion);
+      if (draft.pattern) fd.append('pattern', draft.pattern);
+      if (draft.material) fd.append('material', draft.material);
+      if (draft.season) fd.append('season', draft.season);
+      if (draft.formality) fd.append('formality', draft.formality);
+      if (draft.weather) fd.append('weather', draft.weather);
+      if (embedNow) fd.append('embed', 'true');
+      fd.append('image', draftImageFile);
+
+      const res = await confirmClothMetadata(fd);
+      if (res?.success) {
+        setClothes((prev) => [...prev, res.data]);
+        setDraft(null);
+        setDraftImageFile(null);
+      }
+    } catch (error) {
+      handleApiError(error, 'Failed to save item');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -64,8 +108,119 @@ function AddClothesPage() {
           </div>
         </div>
       }>
-        <UploadForm onAddItem={addCloth} />
+        <UploadForm onAddItem={addCloth} isSubmitting={submitting} />
       </Suspense>
+
+      {/* Metadata Confirmation */}
+      {draft && (
+        <div className="bg-white rounded-lg shadow-sm p-6 animate-slide-up">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Confirm Item Details</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={manualMode} onChange={(e) => setManualMode(e.target.checked)} />
+              Enter manually
+            </label>
+          </div>
+          <form onSubmit={confirmCloth} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.name || ''}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.type || ''}
+                onChange={(e) => setDraft({ ...draft, type: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.color || ''}
+                onChange={(e) => setDraft({ ...draft, color: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Occasion</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.occasion || ''}
+                onChange={(e) => setDraft({ ...draft, occasion: e.target.value })}
+                placeholder="e.g., formal, casual, party"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Material</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.material || ''}
+                onChange={(e) => setDraft({ ...draft, material: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Pattern</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.pattern || ''}
+                onChange={(e) => setDraft({ ...draft, pattern: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Season</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.season || ''}
+                onChange={(e) => setDraft({ ...draft, season: e.target.value })}
+                placeholder="e.g., summer, winter"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Formality</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.formality || ''}
+                onChange={(e) => setDraft({ ...draft, formality: e.target.value })}
+                placeholder="e.g., casual, formal, smart-casual"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Weather Suitability</label>
+              <input
+                type="text"
+                className="input-field"
+                value={draft.weather || ''}
+                onChange={(e) => setDraft({ ...draft, weather: e.target.value })}
+                placeholder="e.g., warm weather, rainy"
+              />
+            </div>
+            <div className="md:col-span-2 flex items-center gap-3 mt-2">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={embedNow} onChange={(e) => setEmbedNow(e.target.checked)} />
+                Generate embedding now
+              </label>
+              <button type="submit" className="btn-primary" disabled={submitting}>{submitting ? 'Saving…' : 'Confirm Metadata'}</button>
+              <button type="button" className="btn-secondary" disabled={submitting} onClick={() => { setDraft(null); setDraftImageFile(null); }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="bg-white rounded-lg shadow-sm p-6">
