@@ -30,7 +30,7 @@ nano .env
 ```env
 # Database
 MONGODB_URI=mongodb://localhost:27017/smart-wardrobe
-MONGODB_URI_PROD=mongodb+srv://username:password@cluster.mongodb.net/smart-wardrobe
+MONGODB_URI_PROD=mongodb+srv://<username>:<password>@<cluster-host>/<database-name>
 
 # JWT
 JWT_SECRET=your-super-secret-jwt-key-here
