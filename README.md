@@ -141,11 +141,6 @@ npm run build            # Build both frontend and backend
 npm run build:frontend   # Build only frontend
 npm run build:backend    # Build only backend
 
-# Testing
-npm test                 # Run all tests
-npm run test:backend     # Run backend tests
-npm run test:frontend    # Run frontend tests
-
 # Database
 npm run db:index         # Create database indexes
 npm run db:seed          # Seed with sample data
