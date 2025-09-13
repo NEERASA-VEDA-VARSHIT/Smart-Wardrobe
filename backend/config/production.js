@@ -11,7 +11,7 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 const config = {
   // Database
   mongodb: {
-    uri: process.env.MONGODB_URI_PROD || process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-wardrobe',
+    uri: process.env.MONGODB_URI_PROD || process.env.MONGODB_URI,
     options: {
       useNewUrlParser: true,
       useUnifiedTopology: true,
