@@ -213,9 +213,33 @@ export function vectorSearch(queryText, filter = {}, limit = 10) {
   });
 }
 
+export function bulkRegenerateEmbeddings() {
+  return apiRequest('/clothes/bulk-regenerate-embeddings', {
+    method: 'POST'
+  });
+}
+
 export function deleteCloth(id) {
   return apiRequest(`/clothes/${id}`, { 
     method: 'DELETE',
+  });
+}
+
+// Laundry bag API
+export function listLaundryBag() {
+  return apiRequest('/clothes/laundry');
+}
+
+export function updateLaundryBag(ids, action) {
+  return apiRequest('/clothes/laundry', {
+    method: 'POST',
+    body: { ids, action }
+  });
+}
+
+export function cleanLaundryBag() {
+  return apiRequest('/clothes/laundry/clean', {
+    method: 'POST'
   });
 }
 
